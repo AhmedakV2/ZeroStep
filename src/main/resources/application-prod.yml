@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${jdbc:postgresql://localhost:5432/postgres}
-    username: ${zerostep}
-    password: ${zerostep0370}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/zerostep}
+    username: ${DB_USERNAME:zerostep}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20

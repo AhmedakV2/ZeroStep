@@ -90,8 +90,7 @@ public class AdminUserService {
                 saved.getUsername(),
                 saved.getEmail(),
                 temporaryPassword,
-                "Kullanici olusturuldu. Gecici sifreyi kullaniciya guvenli sekilde iletin. \" +\n" +
-                        "                        \"Ilk giriste sifresini degistirmek zorunda kalacak."
+                "Kullanici olusturuldu. Gecici sifreyi kullaniciya guvenli sekilde iletin. Ilk giriste sifresini degistirmek zorunda kalacak."
         );
 
     }
@@ -136,21 +135,23 @@ public class AdminUserService {
         log.info("Admin kullanicinin kilidini acti: {}",user.getUsername());
     }
 
+
     // ROL DEGISTIRME
     @Transactional
-    public AdminUserResponse updateRoles(UUID publicId,AdminUpdateRolesRequest request ,String actingUsername) {
+    public AdminUserResponse updateRoles(UUID publicId, AdminUpdateRolesRequest request, String actingUsername) {
         User user = findOrThrow(publicId);
         Set<String> oldRolesNames = user.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
         Set<Role> newRoles = resolveRoles(request.roles());
         Set<String> newRolesNames = newRoles.stream().map(Role::getName).collect(Collectors.toSet());
 
-        if(user.getUsername().equals(actingUsername) &&
-                oldRolesNames.contains("ADMIN") && newRolesNames.contains("ADMIN")) {
+        // FIX: && !newRolesNames.contains("ADMIN") - admin'ken admin'ligini kaldirmaya calisirsa
+        if (user.getUsername().equals(actingUsername) &&
+                oldRolesNames.contains("ADMIN") && !newRolesNames.contains("ADMIN")) {
             throw new ForbiddenException("Kendi admin yetkinizi kaldiramazsiniz");
         }
 
-        if(hasAdminRole(user)&& !newRolesNames.contains("ADMIN")&&
-         userRepository.countActiveAdmins() <=  1){
+        if (hasAdminRole(user) && !newRolesNames.contains("ADMIN") &&
+                userRepository.countActiveAdmins() <= 1) {
             throw new ForbiddenException("Sistemdeki son adminin rolu kaldirilamaz");
         }
 
@@ -159,11 +160,11 @@ public class AdminUserService {
 
         refreshTokenService.revokeAll(user);
 
-        auditService.record("USER_ROLES_CHANGED","USER",user.getId(),
-                Map.of("username",user.getUsername(),
-                        "oldRoles",oldRolesNames,
-                        "newRoles",newRolesNames));
-        log.info("Admin rol degistirdi: {} ({} -> {})",user.getUsername(),oldRolesNames,newRolesNames);
+        auditService.record("USER_ROLES_CHANGED", "USER", user.getId(),
+                Map.of("username", user.getUsername(),
+                        "oldRoles", oldRolesNames,
+                        "newRoles", newRolesNames));
+        log.info("Admin rol degistirdi: {} ({} -> {})", user.getUsername(), oldRolesNames, newRolesNames);
         return toAdminResponse(user);
     }
 
@@ -189,8 +190,7 @@ public class AdminUserService {
         return new AdminResetPasswordResponse(
                 user.getUsername(),
                 newPassword,
-                "Sifre sifirlandi. Yeni gecici sifreyi kullaniciya guvenli iletin. \" +\n" +
-                        "                        \"Ilk giriste degistirmek zorunda kalacak."
+                "Sifre sifirlandi. Yeni gecici sifreyi kullaniciya guvenli iletin. Ilk giriste degistirmek zorunda kalacak."
         );
     }
 

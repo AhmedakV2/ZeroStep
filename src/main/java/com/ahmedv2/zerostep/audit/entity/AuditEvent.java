@@ -42,7 +42,7 @@ public class AuditEvent {
     @Column(name = "payload",nullable = false,columnDefinition = "jsonb")
     private Map<String, Object> payload = new HashMap<>();
 
-    @Column(name="ipAddress",length = 45)
+    @Column(name="ip_Address",length = 45)
     private String ipAddress;
 
     @Column(name = "user_agent",length = 255)

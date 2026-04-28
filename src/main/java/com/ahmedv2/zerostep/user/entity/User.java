@@ -5,15 +5,18 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-// BaseEntity uzanir; createdAt/updatedAt/createdBy/updatedBy orada, duplicate yok
+// BaseEntity uzanir; createdAt/updatedAt/createdBy/updatedBy orada
+// EntityListeners child entity'de tekrar belirtilmek ZORUNDA; BaseEntity'den miras alinmaz
 @Entity
 @Table(name = "users")
+@EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor

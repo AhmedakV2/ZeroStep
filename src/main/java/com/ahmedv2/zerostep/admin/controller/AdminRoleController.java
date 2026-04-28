@@ -18,7 +18,7 @@ import java.util.List;
 @RequestMapping("/api/v1/admin/roles")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
-@Tag(name="Adim - Roles", description = "Sistem rolleri")
+@Tag(name = "Admin - Roles", description = "Sistem rolleri")
 @SecurityRequirement(name = "bearerAuth")
 public class AdminRoleController {
 

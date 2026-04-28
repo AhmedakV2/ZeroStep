@@ -18,7 +18,7 @@ public record AdminUserResponse(
         Instant lastLoginAt,
         Instant createdAt,
         String createdBy,
-        Instant updateAt,
+        Instant updatedAt,
         String updatedBy,
         Set<String> roles
 ) {}
