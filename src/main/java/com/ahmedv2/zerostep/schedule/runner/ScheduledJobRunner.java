@@ -7,6 +7,7 @@ import com.ahmedv2.zerostep.execution.entity.TriggerType;
 import com.ahmedv2.zerostep.execution.repository.ExecutionRepository;
 import com.ahmedv2.zerostep.execution.runner.ExecutionRunner;
 import com.ahmedv2.zerostep.mail.service.MailService;
+import com.ahmedv2.zerostep.notification.service.NotificationService;
 import com.ahmedv2.zerostep.schedule.entity.JobSchedule;
 import com.ahmedv2.zerostep.schedule.repository.JobScheduleRepository;
 import com.ahmedv2.zerostep.schedule.service.ScheduleNextRunCalculator;
@@ -35,6 +36,7 @@ public class ScheduledJobRunner {
     private final ScheduleNextRunCalculator nextRunCalculator;
     private final TestStepRepository testStepRepository;
     private final MailService mailService;
+    private final NotificationService notificationService;
 
     @Scheduled(fixedDelay = 60_000L)
     @Transactional
@@ -62,7 +64,6 @@ public class ScheduledJobRunner {
             return;
         }
 
-        // Execution kaydı oluştur
         Execution execution = new Execution();
         execution.setScenario(schedule.getScenario());
         execution.setTriggeredBy(schedule.getCreatedBy());
@@ -71,16 +72,19 @@ public class ScheduledJobRunner {
         execution.setStatus(ExecutionStatus.QUEUED);
         Execution saved = executionRepository.save(execution);
 
-        // Async runner'ı tetikle; execution tamamlanınca mail gönder
         executionRunner.run(saved.getId());
 
-        // nextRunAt güncelle ve lastRunAt kaydet
+        // Schedule tetiklenince sahibine bildirim gonder
+        notificationService.notifyScheduleTriggered(
+                schedule.getCreatedBy().getId(),
+                schedule.getScenario().getName(),
+                saved.getPublicId()
+        );
+
         schedule.setLastRunAt(Instant.now());
         schedule.setNextRunAt(nextRunCalculator.calculateNext(schedule));
         scheduleRepository.save(schedule);
 
-        // Mail recipients varsa; execution tamamlandıktan sonra gönderilmesi için
-        // event dinleyici yaklaşımı yerine post-execution callback ile çözeceğiz (aşağıda)
         if (schedule.getRecipients() != null && schedule.getRecipients().length > 0) {
             schedulePostExecutionMail(saved.getId(), schedule);
         }

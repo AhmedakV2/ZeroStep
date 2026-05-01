@@ -11,6 +11,7 @@ import com.ahmedv2.zerostep.execution.handler.ActionHandlerFactory;
 import com.ahmedv2.zerostep.execution.repository.ExecutionRepository;
 import com.ahmedv2.zerostep.execution.repository.ExecutionStepResultRepository;
 import com.ahmedv2.zerostep.execution.service.ExecutionLogService;
+import com.ahmedv2.zerostep.notification.service.NotificationService;
 import com.ahmedv2.zerostep.scenario.entity.Scenario;
 import com.ahmedv2.zerostep.step.entity.TestStep;
 import com.ahmedv2.zerostep.step.repository.TestStepRepository;
@@ -40,6 +41,7 @@ public class ExecutionRunner {
     private final WebDriverPool webDriverPool;
     private final ActionHandlerFactory handlerFactory;
     private final com.ahmedv2.zerostep.execution.sse.SseEventBroadcaster sseBroadcaster;
+    private final NotificationService notificationService;
 
     private final ConcurrentHashMap<Long, AtomicBoolean> cancelFlags = new ConcurrentHashMap<>();
 
@@ -283,8 +285,18 @@ public class ExecutionRunner {
             }
             if (errorMsg != null) e.setErrorMessage(errorMsg);
             executionRepository.save(e);
+
+            // Execution sahibine bildirim gonder
+            if (e.getTriggeredBy() != null && status.isTerminal()) {
+                notificationService.notifyExecutionFinished(
+                        e.getTriggeredBy().getId(),
+                        e.getScenario().getName(),
+                        status.name(),
+                        e.getPublicId()
+                );
+            }
         });
-        // Status terminal ise SSE bagli clientlara haber ver, stream'i kapat
+
         if (status.isTerminal()) {
             sseBroadcaster.publishCompletion(executionId, status.name());
         }
