@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Execution Sonucu</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background: #fff;
+            border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+        .header { background: #2c3e50; color: #fff; padding: 24px; text-align: center; }
+        .header h1 { margin: 0; font-size: 22px; }
+        .status-bar { padding: 12px; text-align: center; font-weight: bold; font-size: 18px; }
+        .status-COMPLETED { background: #2ecc71; color: #fff; }
+        .status-FAILED    { background: #e74c3c; color: #fff; }
+        .status-CANCELLED { background: #f39c12; color: #fff; }
+        .status-TIMEOUT   { background: #e67e22; color: #fff; }
+        .body { padding: 24px; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+        td:first-child { font-weight: bold; color: #555; width: 40%; }
+        .footer { background: #ecf0f1; padding: 16px; text-align: center;
+            font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>ZeroStep - Test Raporu</h1>
+        <p th:text="${scenarioName}" style="margin:4px 0 0 0; opacity:.8;"></p>
+    </div>
+
+    <div class="status-bar" th:classappend="'status-' + ${status}" th:text="${status}"></div>
+
+    <div class="body">
+        <table>
+            <tr><td>Senaryo</td><td th:text="${scenarioName}"></td></tr>
+            <tr><td>Tetikleyen</td><td th:text="${triggeredBy}"></td></tr>
+            <tr><td>Başlangıç</td><td th:text="${startedAt}"></td></tr>
+            <tr><td>Bitiş</td><td th:text="${finishedAt}"></td></tr>
+            <tr><td>Süre (ms)</td><td th:text="${durationMs}"></td></tr>
+            <tr><td>Toplam Step</td><td th:text="${totalSteps}"></td></tr>
+            <tr><td>Geçti / Kaldı</td>
+                <td><span th:text="${passedSteps}" style="color:#27ae60;font-weight:bold;"></span>
+                    / <span th:text="${failedSteps}" style="color:#e74c3c;font-weight:bold;"></span>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">
+        Bu mail ZeroStep tarafından otomatik gönderilmiştir. |
+        Execution ID: <span th:text="${executionPublicId}"></span>
+    </div>
+</div>
+</body>
+</html>

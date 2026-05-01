@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Scheduled Test Hatası</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
+        .container { max-width: 600px; margin: 20px auto; background: #fff;
+            border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+        .header { background: #e74c3c; color: #fff; padding: 24px; text-align: center; }
+        .body { padding: 24px; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+        td:first-child { font-weight: bold; color: #555; width: 40%; }
+        .error-box { background: #fff5f5; border-left: 4px solid #e74c3c;
+            padding: 12px; margin-top: 16px; font-family: monospace; font-size: 13px; }
+        .footer { background: #ecf0f1; padding: 16px; text-align: center;
+            font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>Scheduled Test Basarisiz</h1></div>
+    <div class="body">
+        <table>
+            <tr><td>Senaryo</td><td th:text="${scenarioName}"></td></tr>
+            <tr><td>Durum</td><td style="color:#e74c3c;font-weight:bold;" th:text="${status}"></td></tr>
+            <tr><td>Başlangıç</td><td th:text="${startedAt}"></td></tr>
+            <tr><td>Bitiş</td><td th:text="${finishedAt}"></td></tr>
+            <tr><td>Geçti / Kaldı</td>
+                <td><span th:text="${passedSteps}" style="color:#27ae60;font-weight:bold;"></span>
+                    / <span th:text="${failedSteps}" style="color:#e74c3c;font-weight:bold;"></span>
+                </td>
+            </tr>
+        </table>
+        <div class="error-box" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+    </div>
+    <div class="footer">Execution ID: <span th:text="${executionPublicId}"></span></div>
+</div>
+</body>
+</html>

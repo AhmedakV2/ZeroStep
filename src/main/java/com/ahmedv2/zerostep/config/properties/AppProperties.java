@@ -51,6 +51,7 @@ public class AppProperties {
     @Setter
     public static class Mail {
         private boolean enabled = false;
+        private String provider = "smtp";
         @Email private String fromAddress = "noreply@zerostep.local";
         private String fromName = "ZeroStep";
     }

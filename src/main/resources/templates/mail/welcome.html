@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Hoşgeldiniz</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
+        .container { max-width: 600px; margin: 20px auto; background: #fff;
+            border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+        .header { background: #2c3e50; color: #fff; padding: 24px; text-align: center; }
+        .body { padding: 32px; }
+        .password-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;
+            padding: 12px 16px; font-family: monospace; font-size: 16px;
+            letter-spacing: 2px; text-align: center; margin: 16px 0; }
+        .footer { background: #ecf0f1; padding: 16px; text-align: center;
+            font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>ZeroStep'e Hoşgeldiniz</h1></div>
+    <div class="body">
+        <p>Merhaba <strong th:text="${username}"></strong>,</p>
+        <p>Hesabınız oluşturuldu. Aşağıdaki geçici şifreyle giriş yapabilirsiniz:</p>
+        <div class="password-box" th:text="${temporaryPassword}"></div>
+        <p><strong>İlk girişte şifrenizi değiştirmeniz zorunludur.</strong></p>
+        <p>Şifreyi kimseyle paylaşmayın.</p>
+    </div>
+    <div class="footer">ZeroStep Test Otomasyon Platformu</div>
+</div>
+</body>
+</html>
