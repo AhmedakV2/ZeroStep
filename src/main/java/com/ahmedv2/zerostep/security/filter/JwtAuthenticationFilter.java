@@ -69,8 +69,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return bearer.substring(BEARER_PREFIX.length()).trim();
         }
 
+        // SSE endpoint'leri header gonderemez; query param'dan token al
+        // Ornek: /api/v1/executions/{publicId}/stream?token=xxx
         String uri = request.getRequestURI();
-        if (uri != null && uri.contains("/executions/stream/")) {
+        if (uri != null && uri.endsWith("/stream")) {
             return request.getParameter(QUERY_TOKEN_PARAM);
         }
         return null;

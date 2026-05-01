@@ -30,4 +30,10 @@ public class TestStepConfig {
     private Integer sleepMax;
 
     private String countOperator;
+
+    private Boolean caseInsensitive;
+
+    private String countOperator;
+
+    private Boolean logScriptResult;
 }

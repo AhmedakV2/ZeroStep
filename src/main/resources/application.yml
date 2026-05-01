@@ -68,6 +68,22 @@ app:
     enabled: false
     from-address: noreply@zerostep.local
     from-name: ZeroStep
+  execution:
+    # Sistem genelinde ayni anda max paralel browser
+    max-concurrent-drivers: 5
+    # Bir browser'i pool'dan alirken max bekleme suresi
+    acquire-timeout-seconds: 30
+    # Default page load timeout
+    page-load-timeout-seconds: 60
+    # Default implicit wait
+    implicit-wait-seconds: 0
+    # Screenshot kayit dizini
+    screenshot-dir: ./screenshots
+    # Headless mode default
+    headless: false
+    # Browser baslatma sirasinda window size
+    window-width: 1920
+    window-height: 1080
 
 server:
   port: 8080
