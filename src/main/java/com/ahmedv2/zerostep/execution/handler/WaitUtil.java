@@ -8,28 +8,29 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
 
-public  final class WaitUtil {
+public class WaitUtil {
 
-
-    private WaitUtil() {}
-
-    public static WebElement waitVisible(WebDriver driver, By by, int seconds) {
-        return new WebDriverWait(driver, Duration.ofSeconds(seconds))
+    // Element DOM'da ve görünür olana kadar bekler
+    public static WebElement waitVisible(WebDriver driver, By by, int timeoutSeconds) {
+        return new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds))
                 .until(ExpectedConditions.visibilityOfElementLocated(by));
     }
 
-    public static WebElement waitClickable(WebDriver driver, By by, int seconds) {
-        return new WebDriverWait(driver, Duration.ofSeconds(seconds))
+    // Element tıklanabilir olana kadar bekler
+    public static WebElement waitClickable(WebDriver driver, By by, int timeoutSeconds) {
+        return new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds))
                 .until(ExpectedConditions.elementToBeClickable(by));
     }
 
-    public static boolean waitInvisibility(WebDriver driver, By by, int seconds) {
-        return new WebDriverWait(driver, Duration.ofSeconds(seconds))
+    // Element DOM'dan kaybolana kadar bekler
+    public static boolean waitInvisible(WebDriver driver, By by, int timeoutSeconds) {
+        return new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds))
                 .until(ExpectedConditions.invisibilityOfElementLocated(by));
     }
 
-    public static WebElement WaitPresent(WebDriver driver , By by ,int seconds) {
-        return new WebDriverWait(driver ,Duration.ofSeconds(seconds))
+    // Element sadece DOM'da mevcut olana kadar bekler (görünür olmak zorunda değil)
+    public static WebElement waitPresent(WebDriver driver, By by, int timeoutSeconds) {
+        return new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds))
                 .until(ExpectedConditions.presenceOfElementLocated(by));
     }
 }

@@ -31,9 +31,4 @@ public class TestStepConfig {
 
     private String countOperator;
 
-    private Boolean caseInsensitive;
-
-    private String countOperator;
-
-    private Boolean logScriptResult;
 }

@@ -12,4 +12,5 @@ public interface ExecutionStepResultRepository extends JpaRepository<ExecutionSt
     @Query("SELECT sr FROM ExecutionStepResult sr WHERE sr.execution.id = :executionId " +
             "ORDER BY sr.stepOrder ASC")
     List<ExecutionStepResult> findByExecutionIdOrdered(@Param("executionId") Long executionId);
+    List<ExecutionStepResult> findByExecutionIdOrderByStepOrder(Long executionId);
 }
