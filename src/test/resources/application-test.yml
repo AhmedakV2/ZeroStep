@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/zerostep_test
+    username: zerostep
+    password: zerostep0370
+  jpa:
+    show-sql: false
+  flyway:
+    enabled: true
+
+app:
+  security:
+    jwt:
+      secret: test_secret_must_be_at_least_32_bytes_long_string_here
+      access-token-ttl-minutes: 15
+      refresh-token-ttl-days: 7
+      issuer: zerostep
+    cors:
+      allowed-origins:
+        - http://localhost:3000
+  mail:
+    enabled: false
+  execution:
+    max-concurrent-drivers: 2
+    acquire-timeout-seconds: 5
+    headless: true
+    screenshot-dir: ./test-screenshots
+
+logging:
+  level:
+    root: WARN
+    com.ahmedv2.zerostep: INFO

@@ -8,6 +8,7 @@ import com.ahmedv2.zerostep.execution.entity.ExecutionStepResult;
 import com.ahmedv2.zerostep.execution.entity.StepResultStatus;
 import com.ahmedv2.zerostep.execution.handler.ActionHandler;
 import com.ahmedv2.zerostep.execution.handler.ActionHandlerFactory;
+import com.ahmedv2.zerostep.execution.metrics.ExecutionMetrics;
 import com.ahmedv2.zerostep.execution.repository.ExecutionRepository;
 import com.ahmedv2.zerostep.execution.repository.ExecutionStepResultRepository;
 import com.ahmedv2.zerostep.execution.service.ExecutionLogService;
@@ -28,7 +29,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-// Gercek WebDriver ile asenkron execution
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -42,6 +43,7 @@ public class ExecutionRunner {
     private final ActionHandlerFactory handlerFactory;
     private final com.ahmedv2.zerostep.execution.sse.SseEventBroadcaster sseBroadcaster;
     private final NotificationService notificationService;
+    private final ExecutionMetrics executionMetrics; // Metrics eklendi
 
     private final ConcurrentHashMap<Long, AtomicBoolean> cancelFlags = new ConcurrentHashMap<>();
 
@@ -252,6 +254,10 @@ public class ExecutionRunner {
             return null;
         }
         execution.setStatus(ExecutionStatus.RUNNING);
+
+        // Metrics: Started kaydi eklendi
+        executionMetrics.recordStarted();
+
         execution.setStartedAt(Instant.now());
         return executionRepository.save(execution);
     }
@@ -285,6 +291,13 @@ public class ExecutionRunner {
             }
             if (errorMsg != null) e.setErrorMessage(errorMsg);
             executionRepository.save(e);
+
+            // Metrics: status durumuna gore tamamlanma veya hata/zaman asimi kaydi eklendi
+            if (status == ExecutionStatus.COMPLETED) {
+                executionMetrics.recordCompleted();
+            } else if (status == ExecutionStatus.FAILED || status == ExecutionStatus.TIMEOUT) {
+                executionMetrics.recordFailed();
+            }
 
             // Execution sahibine bildirim gonder
             if (e.getTriggeredBy() != null && status.isTerminal()) {

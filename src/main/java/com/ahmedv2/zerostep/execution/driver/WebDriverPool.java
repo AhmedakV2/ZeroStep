@@ -1,6 +1,8 @@
 package com.ahmedv2.zerostep.execution.driver;
 
 import com.ahmedv2.zerostep.config.properties.AppProperties;
+// Not: ExecutionMetrics sınıfının tam paket yolunu kendi projene göre düzenlemelisin.
+import com.ahmedv2.zerostep.execution.metrics.ExecutionMetrics;
 import com.ahmedv2.zerostep.scenario.entity.BrowserConfig;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import jakarta.annotation.PostConstruct;
@@ -25,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 public class WebDriverPool {
 
     private final AppProperties appProperties;
+    private final ExecutionMetrics executionMetrics; // Metrics eklendi
     private Semaphore semaphore;
 
     @PostConstruct
@@ -49,30 +52,35 @@ public class WebDriverPool {
             throw new IllegalStateException(
                     "WebDriver pool'da bos slot bulunamadi (" + timeout + "s timeout)");
         }
+
+        // tryAcquire basariliysa metrik artir
+        executionMetrics.driverAcquired();
+
         try {
             WebDriver driver = createDriver(browserConfig);
             log.debug("Driver acquired; available permits={}", semaphore.availablePermits());
             return driver;
         } catch (RuntimeException e) {
-            // Driver olusturulamadi; semaphore release et
+            // Driver olusturulamadi; semaphore release et ve metrikleri dengele
             semaphore.release();
+            executionMetrics.driverReleased();
             throw e;
         }
     }
 
     // Driver iade; quit() yapip semaphore release
     public void release(WebDriver driver) {
-        if (driver == null) {
-            semaphore.release();
-            return;
-        }
         try {
-            driver.quit();
-            log.debug("Driver released; available permits={}", semaphore.availablePermits() + 1);
+            if (driver != null) {
+                driver.quit();
+                log.debug("Driver released; available permits={}", semaphore.availablePermits() + 1);
+            }
         } catch (Exception e) {
             log.warn("Driver quit hata; ignore", e);
         } finally {
             semaphore.release();
+            // finally bloğunda metrik azalt
+            executionMetrics.driverReleased();
         }
     }
 

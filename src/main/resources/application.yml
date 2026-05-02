@@ -7,7 +7,6 @@ spring:
     allow-bean-definition-overriding: false
     banner-mode: console
 
-
   mail:
     host: smtp.gmail.com
     port: 587
@@ -19,7 +18,6 @@ spring:
           auth: true
           starttls:
             enable: true
-
 
   jpa:
     open-in-view: false
@@ -56,11 +54,11 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
-      base-path: /actuator
-  endpoint:
-    health:
-      show-details: when-authorized
+        include: health,info,prometheus,metrics
+  prometheus:
+    metrics:
+      export:
+        enabled: true
 
 app:
   security:

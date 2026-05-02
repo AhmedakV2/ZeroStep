@@ -2,6 +2,7 @@ package com.ahmedv2.zerostep.config;
 
 import com.ahmedv2.zerostep.config.properties.AppProperties;
 import com.ahmedv2.zerostep.extension.security.ExtensionTokenAuthenticationFilter;
+import com.ahmedv2.zerostep.ratelimit.RateLimitFilter;
 import com.ahmedv2.zerostep.security.filter.JwtAuthenticationFilter;
 import com.ahmedv2.zerostep.security.filter.PasswordChangeRequiredFilter;
 import com.ahmedv2.zerostep.security.handler.JsonAccessDeniedHandler;
@@ -39,6 +40,7 @@ public class SecurityConfig {
     private final JsonAuthenticationEntryPoint authenticationEntryPoint;
     private final JsonAccessDeniedHandler accessDeniedHandler;
     private final UserDetailsService userDetailsService;
+    private final RateLimitFilter rateLimitFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -64,6 +66,22 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                .headers(headers -> headers
+                        .contentTypeOptions(opt -> {})
+                        .frameOptions(frame -> frame.deny())
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31536000))
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'self'; " +
+                                        "script-src 'self' 'unsafe-inline'; " +
+                                        "style-src 'self' 'unsafe-inline'; " +
+                                        "img-src 'self' data:; " +
+                                        "connect-src 'self' ws: wss:"))
+                        .referrerPolicy(ref -> ref.policy(
+                                org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter
+                                        .ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                )
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(AbstractHttpConfigurer::disable)
@@ -88,6 +106,7 @@ public class SecurityConfig {
                         // Geri kalani authentication ister
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class)
                 // JWT filter en once; Bearer token'i cozumler
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 // Extension token filter JWT'den once; X-AFT-Token header'ini cozumler
