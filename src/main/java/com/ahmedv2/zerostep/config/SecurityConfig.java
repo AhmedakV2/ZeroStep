@@ -88,11 +88,12 @@ public class SecurityConfig {
                         // Geri kalani authentication ister
                         .anyRequest().authenticated()
                 )
-                // Extension token filter en başta; X-AFT-Token header'ını çözer
-                .addFilterBefore(extensionTokenAuthenticationFilter, JwtAuthenticationFilter.class)
-                // JWT filter; UsernamePasswordAuthenticationFilter'in onune ekleniyor
+                // JWT filter en once; Bearer token'i cozumler
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(passwordChangeRequiredFilter, JwtAuthenticationFilter.class)
+                // Extension token filter JWT'den once; X-AFT-Token header'ini cozumler
+                .addFilterBefore(extensionTokenAuthenticationFilter, JwtAuthenticationFilter.class)
+                // Sifre degisikligi filter'i JWT'den sonra; principal belirlendikten sonra calisir
+                .addFilterAfter(passwordChangeRequiredFilter, UsernamePasswordAuthenticationFilter.class)
                 .authenticationProvider(authenticationProvider());
 
         return http.build();

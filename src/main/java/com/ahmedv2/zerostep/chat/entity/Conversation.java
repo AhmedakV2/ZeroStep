@@ -43,6 +43,6 @@ public class Conversation {
     @PrePersist
     void prePersist() {
         if(publicId == null) publicId = UUID.randomUUID();
-        if(createdAt = null) createdAt = Instant.now();
+        if(createdAt == null) createdAt = Instant.now();
     }
 }
