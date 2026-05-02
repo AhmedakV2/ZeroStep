@@ -1,7 +1,9 @@
 package com.ahmedv2.zerostep.config;
 
 import com.ahmedv2.zerostep.config.properties.AppProperties;
+import com.ahmedv2.zerostep.extension.security.ExtensionTokenAuthenticationFilter;
 import com.ahmedv2.zerostep.security.filter.JwtAuthenticationFilter;
+import com.ahmedv2.zerostep.security.filter.PasswordChangeRequiredFilter;
 import com.ahmedv2.zerostep.security.handler.JsonAccessDeniedHandler;
 import com.ahmedv2.zerostep.security.handler.JsonAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
@@ -22,18 +24,16 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import com.ahmedv2.zerostep.security.filter.PasswordChangeRequiredFilter;
-
 
 import java.util.List;
 
-// FAZ 1: JWT filter eklendi, endpoint'ler sikilastirildi
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final AppProperties appProperties;
+    private final ExtensionTokenAuthenticationFilter extensionTokenAuthenticationFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final PasswordChangeRequiredFilter passwordChangeRequiredFilter;
     private final JsonAuthenticationEntryPoint authenticationEntryPoint;
@@ -88,7 +88,9 @@ public class SecurityConfig {
                         // Geri kalani authentication ister
                         .anyRequest().authenticated()
                 )
-                // JWT filter; UsernamePasswordAuthenticationFilter'in ONUNE ekleniyor
+                // Extension token filter en başta; X-AFT-Token header'ını çözer
+                .addFilterBefore(extensionTokenAuthenticationFilter, JwtAuthenticationFilter.class)
+                // JWT filter; UsernamePasswordAuthenticationFilter'in onune ekleniyor
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(passwordChangeRequiredFilter, JwtAuthenticationFilter.class)
                 .authenticationProvider(authenticationProvider());
