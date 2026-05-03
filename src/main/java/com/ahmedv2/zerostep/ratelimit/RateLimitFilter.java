@@ -41,7 +41,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
         // Execute rate limit — kullanıcı bazlı
         else if (uri.matches(".*/scenarios/.*/execute")) {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            String key = auth != null ? auth.getName() : extractIp(request);
+            // Spring Security'nin default olarak atayabileceği "anonymousUser" durumunu da filtreliyoruz.
+            String key = (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser"))
+                    ? auth.getName()
+                    : extractIp(request);
             probe = rateLimiterService.tryConsumeExecute(key);
         }
         // Extension rate limit — token veya IP bazlı

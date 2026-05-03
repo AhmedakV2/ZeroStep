@@ -50,6 +50,11 @@ public class ChatService {
         User target = userRepository.findByPublicId(targetPublicId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", targetPublicId));
 
+        // Pasif veya silinmiş kullanıcı kontrolü
+        if (!target.isEnabled() || target.getDeletedAt() != null) {
+            throw new ConflictException("Bu kullaniciyla konusma baslatilamaz");
+        }
+
         if (requester.getId().equals(target.getId())) {
             throw new ConflictException("Kendinizle konusma baslatamazsiniz");
         }
@@ -95,7 +100,9 @@ public class ChatService {
         Long recipientId = getOtherId(conv, senderId);
         User recipient = userRepository.findById(recipientId)
                 .orElse(null);
-        if (recipient != null) {
+
+        // Recipient aktif ve silinmemişse bildirimi/mesajı ilet
+        if (recipient != null && recipient.isEnabled() && recipient.getDeletedAt() == null) {
             messagingTemplate.convertAndSendToUser(
                     recipient.getUsername(), "/queue/chat", response);
 

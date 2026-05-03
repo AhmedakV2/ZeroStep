@@ -1,3 +1,4 @@
+// src/main/java/com/ahmedv2/zerostep/notification/service/NotificationService.java
 package com.ahmedv2.zerostep.notification.service;
 
 import com.ahmedv2.zerostep.common.exception.ResourceNotFoundException;
@@ -9,6 +10,8 @@ import com.ahmedv2.zerostep.user.entity.User;
 import com.ahmedv2.zerostep.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -31,13 +34,18 @@ public class NotificationService {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
+    // Spring AOP proxy bypass (self-invocation) sorununu çözmek için proxy nesnesini enjekte ediyoruz
+    @Lazy
+    @Autowired
+    private NotificationService self;
+
     // Yeni bildirim kaydet + WebSocket push
-    // REQUIRES_NEW: caller transaction'indan bagimsiz commit edilmeli
+    // REQUIRES_NEW: caller transaction'ından bağımsız commit edilmeli
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void send(Long recipientUserId, NotificationType type,
                      String title, String message, String link) {
         try {
-            // Preference kontrolu; yoksa enabled kabul edilir
+            // Preference kontrolü; yoksa enabled kabul edilir
             boolean enabled = isEnabled(recipientUserId, type);
             if (!enabled) {
                 log.debug("Bildirim engellendi (preference): userId={} type={}", recipientUserId, type);
@@ -57,17 +65,17 @@ public class NotificationService {
             Notification saved = notificationRepository.save(notification);
             log.debug("Bildirim kaydedildi: id={} type={} user={}", saved.getId(), type, recipientUserId);
 
-            // IN_APP kanalinda WebSocket push
+            // IN_APP kanalında WebSocket push
             if (hasChannel(recipientUserId, type, "IN_APP")) {
                 pushWebSocket(recipient.getUsername(), toResponse(saved));
             }
         } catch (Exception e) {
-            log.error("Bildirim gonderilemedi: userId={} type={}", recipientUserId, type, e);
+            log.error("Bildirim gönderilemedi: userId={} type={}", recipientUserId, type, e);
         }
     }
 
-    // Execution tamamlaninca notificationService.notifyExecutionFinished(execution) cagrir
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    // Execution tamamlanınca notificationService.notifyExecutionFinished(execution) çağrılır
+    // @Transactional kaldırıldı, işlem proxy üzerinden (self.send) yönetilecek
     public void notifyExecutionFinished(Long recipientUserId, String scenarioName,
                                         String status, UUID executionPublicId) {
         boolean failed = "FAILED".equals(status) || "TIMEOUT".equals(status);
@@ -76,33 +84,35 @@ public class NotificationService {
         String title = failed ? "Senaryo Basarisiz" : "Senaryo Tamamlandi";
         String msg = scenarioName + " senaryosu " + status + " durumunda bitti.";
         String link = "/executions/" + executionPublicId;
-        send(recipientUserId, type, title, msg, link);
+
+        // Proxy nesnesi üzerinden çağırıyoruz ki REQUIRES_NEW tetiklensin
+        self.send(recipientUserId, type, title, msg, link);
     }
 
-    // Schedule tetiklenince notifyScheduleTriggered cagrir
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    // Schedule tetiklenince notifyScheduleTriggered çağrılır
+    // @Transactional kaldırıldı, işlem proxy üzerinden (self.send) yönetilecek
     public void notifyScheduleTriggered(Long recipientUserId, String scenarioName,
                                         UUID executionPublicId) {
-        send(recipientUserId, NotificationType.SCHEDULE_TRIGGERED,
+        self.send(recipientUserId, NotificationType.SCHEDULE_TRIGGERED,
                 "Zamanlı Görev Başladı",
                 scenarioName + " senaryosu schedule ile tetiklendi.",
                 "/executions/" + executionPublicId);
     }
 
-    // Kullanicinin kendi bildirimleri
+    // Kullanıcının kendi bildirimleri
     @Transactional(readOnly = true)
     public Page<NotificationResponse> list(Long userId, Pageable pageable) {
         return notificationRepository.findByRecipientId(userId, pageable)
                 .map(this::toResponse);
     }
 
-    // Okunmamis bildirim sayisi
+    // Okunmamış bildirim sayısı
     @Transactional(readOnly = true)
     public UnreadCountResponse unreadCount(Long userId) {
         return new UnreadCountResponse(notificationRepository.countUnread(userId));
     }
 
-    // Tek bildirimi okunmus yap
+    // Tek bildirimi okunmuş yap
     @Transactional
     public NotificationResponse markRead(UUID publicId, Long userId) {
         Notification n = notificationRepository.findByPublicIdAndRecipientId(publicId, userId)
@@ -115,7 +125,7 @@ public class NotificationService {
         return toResponse(n);
     }
 
-    // Tum bildirimleri okunmus yap
+    // Tüm bildirimleri okunmuş yap
     @Transactional
     public void markAllRead(Long userId) {
         notificationRepository.markAllRead(userId, Instant.now());
@@ -129,7 +139,7 @@ public class NotificationService {
         notificationRepository.delete(n);
     }
 
-    // Kullanicinin tum preference'larini getir; eksik tipler default olarak donerr
+    // Kullanıcının tüm preference'larını getir; eksik tipler default olarak döner
     @Transactional(readOnly = true)
     public List<NotificationPreferenceResponse> getPreferences(Long userId) {
         List<NotificationPreference> existing = preferenceRepository.findByUserId(userId);
@@ -142,7 +152,7 @@ public class NotificationService {
                 .toList();
     }
 
-    // Preference guncelle; yoksa upsert yap
+    // Preference güncelle; yoksa upsert yap
     @Transactional
     public NotificationPreferenceResponse updatePreference(Long userId, PreferenceUpdateRequest req) {
         User user = userRepository.findById(userId)
@@ -174,14 +184,14 @@ public class NotificationService {
         }
     }
 
-    // Preference DB'de yoksa true (enabled) varsayilir
+    // Preference DB'de yoksa true (enabled) varsayılır
     private boolean isEnabled(Long userId, NotificationType type) {
         return preferenceRepository.findByUserIdAndType(userId, type)
                 .map(NotificationPreference::isEnabled)
                 .orElse(true);
     }
 
-    // IN_APP veya EMAIL kanal kontrolu
+    // IN_APP veya EMAIL kanal kontrolü
     private boolean hasChannel(Long userId, NotificationType type, String channel) {
         return preferenceRepository.findByUserIdAndType(userId, type)
                 .map(p -> Arrays.asList(p.getChannels()).contains(channel))

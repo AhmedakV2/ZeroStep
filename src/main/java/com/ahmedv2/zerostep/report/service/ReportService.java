@@ -1,8 +1,8 @@
-// src/main/java/com/ahmedv2/zerostep/report/service/ReportService.java
 package com.ahmedv2.zerostep.report.service;
 
 import com.ahmedv2.zerostep.common.exception.ResourceNotFoundException;
 import com.ahmedv2.zerostep.execution.entity.Execution;
+import com.ahmedv2.zerostep.execution.entity.ExecutionStatus;
 import com.ahmedv2.zerostep.execution.entity.ExecutionStepResult;
 import com.ahmedv2.zerostep.execution.repository.ExecutionRepository;
 import com.ahmedv2.zerostep.execution.repository.ExecutionStepResultRepository;
@@ -60,10 +60,23 @@ public class ReportService {
     }
 
     public Page<ReportListItemDto> listReports(ReportFilterDto filter, Pageable pageable) {
+        // Parametre çözümlemeleri method çağrısının dışında yapılıyor
+        UUID scenarioId = null;
+        if (filter.scenarioPublicId() != null && !filter.scenarioPublicId().isBlank()) {
+            scenarioId = UUID.fromString(filter.scenarioPublicId());
+        }
+
+        ExecutionStatus executionStatus = null;
+        if (filter.status() != null && !filter.status().isBlank()) {
+            executionStatus = ExecutionStatus.valueOf(filter.status());
+        }
+
+        String username = filter.username() != null ? filter.username() : "";
+
         return executionRepo.findAllFiltered(
-                filter.scenarioPublicId(),
-                filter.status()   != null ? filter.status()   : "",
-                filter.username() != null ? filter.username() : "",
+                scenarioId,
+                executionStatus,
+                username,
                 filter.fromDate(),
                 filter.toDate(),
                 pageable

@@ -19,7 +19,8 @@ public interface JobScheduleRepository extends JpaRepository<JobSchedule, Long> 
     Optional<JobSchedule> findByPublicId(@Param("publicId") UUID publicId);
 
     // Kullanıcının kendi schedule'ları
-    @Query("SELECT j FROM JobSchedule j JOIN FETCH j.scenario WHERE j.createdBy.username = :username")
+    @Query("SELECT j FROM JobSchedule j JOIN FETCH j.scenario JOIN FETCH j.createdBy " +
+            "WHERE j.createdBy.username = :username")
     Page<JobSchedule> findByUsername(@Param("username") String username, Pageable pageable);
 
     // Scheduler: şu an çalışması gereken aktif job'lar

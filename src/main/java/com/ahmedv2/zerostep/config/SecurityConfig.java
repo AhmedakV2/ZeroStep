@@ -22,6 +22,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -106,13 +108,23 @@ public class SecurityConfig {
                         // Geri kalani authentication ister
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class)
-                // JWT filter en once; Bearer token'i cozumler
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                // Extension token filter JWT'den once; X-AFT-Token header'ini cozumler
-                .addFilterBefore(extensionTokenAuthenticationFilter, JwtAuthenticationFilter.class)
-                // Sifre degisikligi filter'i JWT'den sonra; principal belirlendikten sonra calisir
-                .addFilterAfter(passwordChangeRequiredFilter, UsernamePasswordAuthenticationFilter.class)
+
+                // 1. En önce Extension Token çözümlenir (X-AFT-Token header'ı)
+                // Standart form girişinden (UsernamePasswordAuthenticationFilter) önce çalışır.
+                .addFilterBefore(extensionTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+
+                // 2. JWT Token
+                // Extension'dan sonra çalışmasını garanti etmek için UsernamePasswordAuthenticationFilter'ın ARKASINA ekliyoruz.
+                .addFilterAfter(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+
+                // 3. Rate Limit
+                // Kimlik doğrulama işlemleri bittikten sonra çalışması için BasicAuthenticationFilter'ın arkasına ekliyoruz.
+                .addFilterAfter(rateLimitFilter, BasicAuthenticationFilter.class)
+
+                // 4. Şifre değişim zorunluluğu kontrolü
+                // Tüm kimlik doğrulama ve hız sınırları geçildikten sonra çalışması için AnonymousAuthenticationFilter arkasına ekliyoruz.
+                .addFilterAfter(passwordChangeRequiredFilter, AnonymousAuthenticationFilter.class)
+
                 .authenticationProvider(authenticationProvider());
 
         return http.build();

@@ -49,7 +49,10 @@ public class LoginAttemptService {
     }
 
     // Hesap halihazirda kilitli mi?
+    @Transactional(readOnly = true)
     public boolean isBlocked(User user) {
-        return user.isLocked();
+        return userRepository.findById(user.getId())
+                .map(User::isLocked)
+                .orElse(false);
     }
 }
