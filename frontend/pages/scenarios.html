@@ -4,62 +4,157 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZeroStep — Senaryolar</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/main.css">
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/layout.css">
+    <style>
+        /* Dropdown & Tag Input Stilleri */
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            display: none;
+            flex-direction: column;
+            background: var(--clr-surface);
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-md);
+            min-width: 160px;
+            z-index: 100;
+            margin-top: 0.25rem;
+        }
+        .dropdown-menu a, .dropdown-menu button {
+            display: block;
+            width: 100%;
+            padding: 0.6rem 1rem;
+            text-align: left;
+            background: none;
+            border: none;
+            color: var(--clr-text);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background var(--transition);
+        }
+        .dropdown-menu a:hover, .dropdown-menu button:hover {
+            background: var(--clr-surface-2);
+        }
+        .dropdown-menu button.text-danger:hover {
+            background: rgba(224, 82, 96, 0.15);
+            color: var(--clr-danger);
+        }
+
+        /* Tag Input */
+        .tag-input-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            padding: 0.6rem;
+            background: var(--clr-surface-2);
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-sm);
+            min-height: 2.5rem;
+        }
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: var(--clr-primary);
+            color: #fff;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .tag button {
+            background: none;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0;
+            line-height: 1;
+        }
+        .tag-input-container input {
+            flex: 1;
+            min-width: 100px;
+            background: none;
+            border: none;
+            outline: none;
+            color: var(--clr-text);
+            font-family: var(--font-body);
+        }
+
+        /* Dropdown Pozisyon */
+        .actions-cell {
+            position: relative;
+        }
+        .dropdown-menu {
+            min-width: 140px;
+        }
+
+        /* Loading State */
+        .loading { opacity: 0.6; pointer-events: none; }
+    </style>
 </head>
 <body>
 <div id="toast-container"></div>
 
 <div class="app-shell">
-    <aside class="sidebar" id="sidebar"></aside>
-    <header class="topbar" id="topbar"></header>
+    <aside class="sidebar" id="sidebar-container"></aside>
 
     <main class="main-content">
+        <header class="topbar" id="topbar-container"></header>
+
         <div class="page-header">
             <div class="page-header-left">
-                <h2 class="page-title">Senaryolar</h2>
-                <p class="page-subtitle">Test senaryolarını yönetin</p>
+                <h2 class="page-title">Senaryo Yönetimi</h2>
+                <p class="page-subtitle">Test senaryolarını oluşturun ve organize edin.</p>
             </div>
-            <button class="btn btn-primary" id="create-scenario-btn">+ Yeni Senaryo</button>
+            <button class="btn btn-primary" id="btn-new-scenario">
+                <i class="fas fa-plus"></i> Yeni Senaryo
+            </button>
         </div>
 
-        <div class="filter-bar">
-            <input type="text" class="form-input" id="search-input" placeholder="Senaryo ara…" style="max-width:280px">
-            <select class="form-input" id="status-filter" style="max-width:160px">
-                <option value="">Tüm Durumlar</option>
-                <option value="DRAFT">Taslak</option>
-                <option value="READY">Hazır</option>
-                <option value="ARCHIVED">Arşivli</option>
-            </select>
+        <!-- Filtreleme Alanı -->
+        <div class="card filter-bar mt-4" style="display: flex; gap: 1rem; align-items: flex-end;">
+            <div class="form-group" style="flex: 1;">
+                <label class="form-label">Ara (Ad/Açıklama)</label>
+                <input type="text" class="form-input" id="filter-search" placeholder="Senaryo ara... (Debounce)">
+            </div>
+            <div class="form-group" style="width: 200px;">
+                <label class="form-label">Durum</label>
+                <select class="form-input" id="filter-status">
+                    <option value="">Tüm Durumlar</option>
+                    <option value="DRAFT">Taslak</option>
+                    <option value="READY">Hazır</option>
+                    <option value="ARCHIVED">Arşivli</option>
+                </select>
+            </div>
         </div>
 
-        <div class="table-wrapper">
+        <!-- Senaryo Tablosu -->
+        <div class="card mt-4 p-0">
             <table class="data-table">
                 <thead>
                 <tr>
-                    <th>Ad</th>
-                    <th>Durum</th>
-                    <th>Sahibi</th>
-                    <th>Oluşturma</th>
-                    <th>İşlemler</th>
+                    <th style="width: 35%;">Senaryo Adı</th>
+                    <th style="width: 15%;">Durum</th>
+                    <th style="width: 20%;">Sahibi</th>
+                    <th style="width: 20%;">Oluşturulma</th>
+                    <th style="width: 10%; text-align: right;">İşlemler</th>
                 </tr>
                 </thead>
-                <tbody id="scenarios-body">
-                <tr><td colspan="5">
-                    <div class="empty-state">
-                        <span class="empty-state-icon">▤</span>
-                        <p class="empty-state-msg">Yükleniyor…</p>
-                    </div>
-                </td></tr>
+                <tbody id="scenarios-list">
+                    <tr><td colspan="5" class="text-center p-8">Senaryo yükleniyor...</td></tr>
                 </tbody>
             </table>
         </div>
-        <div class="pagination-wrapper" id="pagination"></div>
+
+        <div id="pagination-container" class="mt-4"></div>
     </main>
 </div>
+
+<!-- Modals dilinde bağlı olacak -->
 
 <script src="../assets/js/utils.js"></script>
 <script src="../assets/js/store.js"></script>
@@ -69,9 +164,8 @@
 <script src="../assets/js/router.js"></script>
 <script src="../js/components/sidebar.js"></script>
 <script src="../js/components/topbar.js"></script>
-<script src="../js/components/pagination.js"></script>
 <script src="../js/components/modal.js"></script>
-<script src="../js/components/confirm-dialog.js"></script>
+<script src="../js/components/pagination.js"></script>
 <script src="../js/pages/scenarios.js"></script>
 </body>
 </html>
