@@ -1,0 +1,77 @@
+/* CSS custom property'leri — tüm tema buradan yönetilir */
+:root {
+    --clr-bg:          #0d0f14;
+    --clr-surface:     #161b25;
+    --clr-surface-2:   #1e2535;
+    --clr-border:      #2a3347;
+    --clr-border-focus:#3d7aed;
+    --clr-text:        #e8ecf4;
+    --clr-text-muted:  #8896b0;
+    --clr-primary:     #3d7aed;
+    --clr-primary-h:   #5a91f8;
+    --clr-danger:      #e05260;
+    --clr-danger-h:    #f06272;
+    --clr-success:     #2eb87e;
+    --clr-warning:     #e09040;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.4);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.5);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,.6);
+
+    --transition: 180ms ease;
+    --font-ui:   'IBM Plex Mono', 'Fira Code', 'Consolas', monospace;
+    --font-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Reset */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    background: var(--clr-bg);
+    color: var(--clr-text);
+    font-family: var(--font-body);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+a { color: var(--clr-primary); text-decoration: none; }
+a:hover { color: var(--clr-primary-h); }
+
+ul, ol { list-style: none; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--clr-surface); }
+::-webkit-scrollbar-thumb { background: var(--clr-border); border-radius: 3px; }
+
+/* Focus ring */
+:focus-visible {
+    outline: 2px solid var(--clr-border-focus);
+    outline-offset: 2px;
+}
+
+/* Utility */
+.sr-only {
+    position: absolute; width: 1px; height: 1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap;
+}
+.hidden { display: none !important; }
+.flex   { display: flex; }
+.gap-1  { gap: 0.5rem; }
+.gap-2  { gap: 1rem; }
+.w-full { width: 100%; }
+.text-muted { color: var(--clr-text-muted); }
+.text-danger { color: var(--clr-danger); }
+.text-success { color: var(--clr-success); }
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }

@@ -1,0 +1,139 @@
+/* ── App Shell ────────────────────────────────────────── */
+.app-shell {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: 56px 1fr;
+    grid-template-areas:
+    "sidebar topbar"
+    "sidebar main";
+    min-height: 100vh;
+}
+
+/* ── Main content area ────────────────────────────────── */
+.main-content {
+    grid-area: main;
+    padding: 1.75rem 2rem;
+    overflow-y: auto;
+    background: var(--clr-bg);
+}
+
+/* ── Page header ──────────────────────────────────────── */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.page-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--clr-text);
+}
+
+.page-subtitle {
+    font-size: 0.85rem;
+    color: var(--clr-text-muted);
+    margin-top: 0.2rem;
+}
+
+/* ── Grid layouts ─────────────────────────────────────── */
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+@media (max-width: 900px) {
+    .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+    .app-shell { grid-template-columns: 1fr; grid-template-areas: "topbar" "main"; }
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+}
+
+/* ── Center layout (login vb.) ────────────────────────── */
+.center-layout {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: var(--clr-bg);
+}
+
+/* ── Table ────────────────────────────────────────────── */
+.table-wrapper {
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.data-table th {
+    background: var(--clr-surface);
+    padding: 0.7rem 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--clr-text-muted);
+    border-bottom: 1px solid var(--clr-border);
+}
+
+.data-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--clr-border);
+    color: var(--clr-text);
+    vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+.data-table tbody tr:hover { background: var(--clr-surface); }
+
+/* ── Empty state ──────────────────────────────────────── */
+.empty-state {
+    padding: 3rem 2rem;
+    text-align: center;
+    color: var(--clr-text-muted);
+}
+
+.empty-state-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: .4; }
+.empty-state-msg  { font-size: 0.9rem; }
+
+/* ── Pagination ───────────────────────────────────────── */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
+    margin-top: 1rem;
+}
+
+.page-btn {
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--clr-border);
+    background: var(--clr-surface);
+    color: var(--clr-text-muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+}
+.page-btn:hover { background: var(--clr-surface-2); color: var(--clr-text); }
+.page-btn.active {
+    background: var(--clr-primary);
+    border-color: var(--clr-primary);
+    color: #fff;
+}
+.page-btn:disabled { opacity: .4; cursor: not-allowed; }

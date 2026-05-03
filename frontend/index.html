@@ -1,10 +1,338 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZeroStep — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+
+  <style>
+    /* Login sayfasına özel arka plan efekti */
+    .login-bg {
+      position: fixed; inset: 0;
+      background:
+              radial-gradient(ellipse 80% 60% at 50% -10%, rgba(61,122,237,.18) 0%, transparent 70%),
+              var(--clr-bg);
+    }
+    .login-card {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      z-index: 1;
+    }
+    .login-logo {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .login-logo-text {
+      font-family: var(--font-ui);
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--clr-text);
+      letter-spacing: -.02em;
+    }
+    .login-logo-text span { color: var(--clr-primary); }
+    .login-tagline {
+      font-size: 0.78rem;
+      color: var(--clr-text-muted);
+      margin-top: 0.25rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .login-form { display: flex; flex-direction: column; gap: 1.1rem; }
+    .login-submit { margin-top: 0.5rem; height: 2.75rem; font-size: 0.95rem; }
+
+    /* Şifre alanı toggle */
+    .input-wrapper { position: relative; }
+    .input-wrapper .form-input { padding-right: 2.5rem; }
+    .pw-toggle {
+      position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--clr-text-muted);
+      cursor: pointer; padding: 0; font-size: 1rem; line-height: 1;
+    }
+    .pw-toggle:hover { color: var(--clr-text); }
+  </style>
 </head>
 <body>
+
+<div id="toast-container"></div>
+
+<!-- ── Login ekranı ────────────────────────────────────── -->
+<div id="app-login" class="login-bg center-layout">
+  <div class="login-card card">
+    <div class="login-logo">
+      <div class="login-logo-text">Zero<span>Step</span></div>
+      <div class="login-tagline">Test Otomasyon Platformu</div>
+    </div>
+
+    <form id="login-form" class="login-form" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="username">Kullanıcı Adı</label>
+        <input
+                class="form-input"
+                type="text"
+                id="username"
+                name="username"
+                autocomplete="username"
+                autofocus
+                placeholder="admin"
+        >
+        <span class="form-error" id="username-error"></span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Şifre</label>
+        <div class="input-wrapper">
+          <input
+                  class="form-input"
+                  type="password"
+                  id="password"
+                  name="password"
+                  autocomplete="current-password"
+                  placeholder="••••••••"
+          >
+          <button type="button" class="pw-toggle" id="pw-toggle-btn" aria-label="Şifreyi göster">👁</button>
+        </div>
+        <span class="form-error" id="password-error"></span>
+      </div>
+
+      <!-- Genel hata alanı -->
+      <div id="login-error" class="alert alert-danger hidden" role="alert"></div>
+
+      <button type="submit" class="btn btn-primary w-full login-submit" id="login-btn">
+        Giriş Yap
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ── Şifre Değiştirme Modal ──────────────────────────── -->
+<div id="change-password-modal" class="modal-backdrop hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cpw-title">
+    <div class="modal-header">
+      <h2 class="modal-title" id="cpw-title">Şifre Değiştirme Zorunlu</h2>
+    </div>
+
+    <p style="font-size:.88rem;color:var(--clr-text-muted);margin-bottom:1.25rem;">
+      İlk girişte şifrenizi değiştirmeniz gerekmektedir.
+    </p>
+
+    <form id="change-password-form" novalidate>
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="form-group">
+          <label class="form-label" for="cpw-current">Mevcut Şifre</label>
+          <input class="form-input" type="password" id="cpw-current" name="currentPassword" placeholder="••••••••">
+          <span class="form-error" id="cpw-current-error"></span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="cpw-new">Yeni Şifre</label>
+          <input class="form-input" type="password" id="cpw-new" name="newPassword" placeholder="Min 8 karakter">
+          <span class="form-error" id="cpw-new-error"></span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="cpw-confirm">Yeni Şifre (Tekrar)</label>
+          <input class="form-input" type="password" id="cpw-confirm" name="confirmPassword" placeholder="Tekrar girin">
+          <span class="form-error" id="cpw-confirm-error"></span>
+        </div>
+
+        <div id="cpw-error" class="alert alert-danger hidden"></div>
+
+        <div class="flex gap-1" style="justify-content:flex-end;margin-top:.5rem;">
+          <button type="submit" class="btn btn-primary" id="cpw-submit-btn">Şifreyi Değiştir</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Scripts ─────────────────────────────────────────── -->
+<script src="assets/js/utils.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/toast.js"></script>
+<script src="assets/js/router.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/auth.js"></script>
+
+<script>
+  // ── Login form mantığı ─────────────────────────────────
+  (function () {
+    const form       = document.getElementById('login-form');
+    const loginBtn   = document.getElementById('login-btn');
+    const loginError = document.getElementById('login-error');
+    const pwToggle   = document.getElementById('pw-toggle-btn');
+    const pwInput    = document.getElementById('password');
+
+    // Şifreyi göster/gizle
+    pwToggle.addEventListener('click', () => {
+      const isHidden = pwInput.type === 'password';
+      pwInput.type = isHidden ? 'text' : 'password';
+      pwToggle.textContent = isHidden ? '🙈' : '👁';
+    });
+
+    function setLoading(loading) {
+      loginBtn.disabled = loading;
+      loginBtn.innerHTML = loading
+              ? '<span class="spinner"></span> Giriş yapılıyor...'
+              : 'Giriş Yap';
+    }
+
+    function clearErrors() {
+      document.getElementById('username-error').textContent = '';
+      document.getElementById('password-error').textContent = '';
+      loginError.classList.add('hidden');
+      loginError.textContent = '';
+      document.getElementById('username').classList.remove('is-error');
+      document.getElementById('password').classList.remove('is-error');
+    }
+
+    function showError(msg) {
+      loginError.textContent = msg;
+      loginError.classList.remove('hidden');
+    }
+
+    function validate(username, password) {
+      let ok = true;
+      if (Utils.isBlank(username)) {
+        document.getElementById('username-error').textContent = 'Kullanıcı adı boş olamaz';
+        document.getElementById('username').classList.add('is-error');
+        ok = false;
+      }
+      if (Utils.isBlank(password)) {
+        document.getElementById('password-error').textContent = 'Şifre boş olamaz';
+        document.getElementById('password').classList.add('is-error');
+        ok = false;
+      }
+      return ok;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearErrors();
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!validate(username, password)) return;
+
+      setLoading(true);
+      try {
+        const user = await Auth.login(username, password);
+
+        if (user.passwordChangeRequired) {
+          // Şifre değiştirme modal'ını aç; mevcut şifreyi pre-fill et
+          openChangePasswordModal(password);
+        } else {
+          window.location.href = 'pages/dashboard.html';
+        }
+      } catch (err) {
+        if (err instanceof ApiError) {
+          if (err.status === 401 || err.status === 403) {
+            showError(err.message || 'Kullanıcı adı veya şifre hatalı');
+          } else {
+            showError('Sunucuya bağlanılamadı. Lütfen tekrar deneyin.');
+          }
+        } else {
+          showError('Beklenmedik bir hata oluştu.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    // ── Şifre Değiştirme Modal ─────────────────────────────
+    const modal      = document.getElementById('change-password-modal');
+    const cpwForm    = document.getElementById('change-password-form');
+    const cpwSubmit  = document.getElementById('cpw-submit-btn');
+    const cpwError   = document.getElementById('cpw-error');
+
+    function openChangePasswordModal(prefillPassword = '') {
+      document.getElementById('cpw-current').value = prefillPassword;
+      document.getElementById('cpw-new').value = '';
+      document.getElementById('cpw-confirm').value = '';
+      cpwError.classList.add('hidden');
+      modal.classList.remove('hidden');
+      document.getElementById('cpw-new').focus();
+    }
+
+    function clearCpwErrors() {
+      ['cpw-current', 'cpw-new', 'cpw-confirm'].forEach(id => {
+        document.getElementById(id + '-error').textContent = '';
+        document.getElementById(id).classList.remove('is-error');
+      });
+      cpwError.classList.add('hidden');
+    }
+
+    function validateCpw(current, newPwd, confirm) {
+      let ok = true;
+      if (Utils.isBlank(current)) {
+        document.getElementById('cpw-current-error').textContent = 'Mevcut şifre gerekli';
+        document.getElementById('cpw-current').classList.add('is-error');
+        ok = false;
+      }
+      const pwPattern = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,100}$/;
+      if (!pwPattern.test(newPwd)) {
+        document.getElementById('cpw-new-error').textContent =
+                'Min 8 karakter, büyük/küçük harf, rakam ve özel karakter içermeli';
+        document.getElementById('cpw-new').classList.add('is-error');
+        ok = false;
+      }
+      if (newPwd !== confirm) {
+        document.getElementById('cpw-confirm-error').textContent = 'Şifreler eşleşmiyor';
+        document.getElementById('cpw-confirm').classList.add('is-error');
+        ok = false;
+      }
+      return ok;
+    }
+
+    cpwForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearCpwErrors();
+
+      const current = document.getElementById('cpw-current').value;
+      const newPwd  = document.getElementById('cpw-new').value;
+      const confirm = document.getElementById('cpw-confirm').value;
+
+      if (!validateCpw(current, newPwd, confirm)) return;
+
+      cpwSubmit.disabled = true;
+      cpwSubmit.innerHTML = '<span class="spinner"></span> Değiştiriliyor...';
+
+      try {
+        await Api.post('/users/me/change-password', {
+          currentPassword: current,
+          newPassword: newPwd,
+        });
+        Toast.success('Şifre başarıyla değiştirildi. Lütfen tekrar giriş yapın.');
+        modal.classList.add('hidden');
+        Store.clear();
+        // 1.5 saniye sonra login sayfasını yenile
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (err) {
+        cpwError.textContent = err.message || 'Şifre değiştirilemedi';
+        cpwError.classList.remove('hidden');
+      } finally {
+        cpwSubmit.disabled = false;
+        cpwSubmit.textContent = 'Şifreyi Değiştir';
+      }
+    });
+
+    // ── Zaten giriş yapılmışsa dashboard'a at ─────────────
+    if (Auth.isLoggedIn()) {
+      const user = Auth.getCurrentUser();
+      if (user?.passwordChangeRequired) {
+        openChangePasswordModal();
+      } else {
+        window.location.href = 'pages/dashboard.html';
+      }
+    }
+  })();
+</script>
 
 </body>
 </html>
