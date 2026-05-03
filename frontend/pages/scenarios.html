@@ -1,10 +1,77 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroStep — Senaryolar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/layout.css">
 </head>
 <body>
+<div id="toast-container"></div>
 
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <header class="topbar" id="topbar"></header>
+
+    <main class="main-content">
+        <div class="page-header">
+            <div class="page-header-left">
+                <h2 class="page-title">Senaryolar</h2>
+                <p class="page-subtitle">Test senaryolarını yönetin</p>
+            </div>
+            <button class="btn btn-primary" id="create-scenario-btn">+ Yeni Senaryo</button>
+        </div>
+
+        <div class="filter-bar">
+            <input type="text" class="form-input" id="search-input" placeholder="Senaryo ara…" style="max-width:280px">
+            <select class="form-input" id="status-filter" style="max-width:160px">
+                <option value="">Tüm Durumlar</option>
+                <option value="DRAFT">Taslak</option>
+                <option value="READY">Hazır</option>
+                <option value="ARCHIVED">Arşivli</option>
+            </select>
+        </div>
+
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Ad</th>
+                    <th>Durum</th>
+                    <th>Sahibi</th>
+                    <th>Oluşturma</th>
+                    <th>İşlemler</th>
+                </tr>
+                </thead>
+                <tbody id="scenarios-body">
+                <tr><td colspan="5">
+                    <div class="empty-state">
+                        <span class="empty-state-icon">▤</span>
+                        <p class="empty-state-msg">Yükleniyor…</p>
+                    </div>
+                </td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination-wrapper" id="pagination"></div>
+    </main>
+</div>
+
+<script src="../assets/js/utils.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/toast.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/router.js"></script>
+<script src="../js/components/sidebar.js"></script>
+<script src="../js/components/topbar.js"></script>
+<script src="../js/components/pagination.js"></script>
+<script src="../js/components/modal.js"></script>
+<script src="../js/components/confirm-dialog.js"></script>
+<script src="../js/pages/scenarios.js"></script>
 </body>
 </html>

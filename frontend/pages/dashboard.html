@@ -1,10 +1,119 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroStep — Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/layout.css">
 </head>
 <body>
 
+<div id="toast-container"></div>
+
+<div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar" role="complementary"></aside>
+
+    <!-- Topbar -->
+    <header class="topbar" id="topbar" role="banner"></header>
+
+    <!-- Main -->
+    <main class="main-content" id="main-content">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-header-left">
+                <h2 class="page-title">Dashboard</h2>
+                <p class="page-subtitle">Genel durum ve son aktiviteler</p>
+            </div>
+            <button class="btn btn-primary" id="quick-create-btn">+ Senaryo Oluştur</button>
+        </div>
+
+        <!-- Stat Cards -->
+        <div class="grid-4" id="stat-cards">
+            <div class="stat-card stat-card-accent-blue">
+                <span class="stat-card-label">Toplam Çalıştırma</span>
+                <span class="stat-card-value" id="stat-total">—</span>
+            </div>
+            <div class="stat-card stat-card-accent-green">
+                <span class="stat-card-label">Başarılı</span>
+                <span class="stat-card-value" id="stat-passed">—</span>
+            </div>
+            <div class="stat-card stat-card-accent-red">
+                <span class="stat-card-label">Başarısız</span>
+                <span class="stat-card-value" id="stat-failed">—</span>
+            </div>
+            <div class="stat-card stat-card-accent-orange">
+                <span class="stat-card-label">Aktif Schedule</span>
+                <span class="stat-card-value" id="stat-schedule">—</span>
+            </div>
+        </div>
+
+        <!-- Son Çalıştırmalar -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h3 class="card-title">Son Çalıştırmalar</h3>
+                <a href="executions.html" class="btn btn-ghost btn-sm">Tümünü Gör</a>
+            </div>
+            <div id="executions-loading" class="empty-state" style="display:none">
+                <span class="spinner" style="border-color:var(--clr-border);border-top-color:var(--clr-primary);width:1.5rem;height:1.5rem;"></span>
+            </div>
+            <div class="table-wrapper" id="executions-table-wrapper">
+                <table class="data-table" id="executions-table">
+                    <thead>
+                    <tr>
+                        <th>Senaryo</th>
+                        <th>Durum</th>
+                        <th>Süre</th>
+                        <th>Adımlar</th>
+                        <th>Tarih</th>
+                    </tr>
+                    </thead>
+                    <tbody id="executions-body">
+                    <tr><td colspan="5">
+                        <div class="empty-state">
+                            <span class="empty-state-icon">▶</span>
+                            <p class="empty-state-msg">Henüz çalıştırma yok</p>
+                        </div>
+                    </td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Son Bildirimler -->
+        <div class="card mt-2">
+            <div class="card-header">
+                <h3 class="card-title">Son Bildirimler</h3>
+                <a href="notifications.html" class="btn btn-ghost btn-sm">Tümünü Gör</a>
+            </div>
+            <div id="notifications-list">
+                <div class="empty-state">
+                    <span class="empty-state-icon">◉</span>
+                    <p class="empty-state-msg">Yükleniyor…</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- Scripts: utilities önce, components sonra, sayfa JS en son -->
+<script src="../assets/js/utils.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/toast.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/router.js"></script>
+<script src="../js/components/sidebar.js"></script>
+<script src="../js/components/topbar.js"></script>
+<script src="../js/components/pagination.js"></script>
+<script src="../js/components/modal.js"></script>
+<script src="../js/components/confirm-dialog.js"></script>
+<script src="../js/pages/dashboard.js"></script>
 </body>
 </html>

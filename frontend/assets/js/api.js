@@ -1,6 +1,7 @@
 // Merkezi fetch wrapper; token ekleme, 401 refresh, hata yönetimi
 const Api = (() => {
-    const BASE = '/api/v1';
+    // API adresi backend'i (8080 portunu) tam olarak işaret edecek şekilde güncellendi
+    const BASE = 'http://localhost:8080/api/v1';
 
     // 401 sonrası refresh döngüsünü önlemek için flag
     let _refreshing = false;
