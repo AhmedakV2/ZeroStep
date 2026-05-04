@@ -132,7 +132,7 @@ window.toggleActionsMenu = (btn) => {
 
 // ═══════════════════════════════════════════════════════════ DETAIL
 window.openScenarioDetail = (publicId) => {
-    window.location.hash = `#/scenarios/${publicId}`;
+    window.location.href = 'scenario-detail.html?id=' + publicId;
 };
 
 // ═══════════════════════════════════════════════════════════ EDIT/CREATE

@@ -1,10 +1,114 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroStep — Çalıştırmalar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/layout.css">
+    <style>
+        /* Durum badge spinner animasyonu */
+        .badge-spinning {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .badge-spinning .mini-spinner {
+            width: 0.7rem;
+            height: 0.7rem;
+            border: 1.5px solid rgba(255,255,255,.3);
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin .65s linear infinite;
+            flex-shrink: 0;
+        }
+        /* Satır hover pointer */
+        .data-table tbody tr.clickable-row { cursor: pointer; }
+    </style>
 </head>
 <body>
+<div id="toast-container"></div>
 
+<div class="app-shell" id="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <header class="topbar" id="topbar"></header>
+
+    <main class="main-content">
+        <div class="page-header">
+            <div class="page-header-left">
+                <h2 class="page-title">Çalıştırmalar</h2>
+                <p class="page-subtitle">Senaryo çalıştırma geçmişi</p>
+            </div>
+        </div>
+
+        <!-- Filtre Barı -->
+        <div class="filter-bar" style="flex-wrap:wrap; gap:.75rem; margin-bottom:1.25rem;">
+            <input type="text" class="form-input" id="filter-search"
+                   placeholder="Senaryo adı ara..." style="max-width:220px;">
+
+            <select class="form-input" id="filter-status" style="max-width:160px;">
+                <option value="">Tüm Durumlar</option>
+                <option value="QUEUED">Kuyrukta</option>
+                <option value="RUNNING">Çalışıyor</option>
+                <option value="COMPLETED">Tamamlandı</option>
+                <option value="FAILED">Başarısız</option>
+                <option value="CANCELLED">İptal</option>
+                <option value="TIMEOUT">Zaman Aşımı</option>
+            </select>
+
+            <input type="datetime-local" class="form-input" id="filter-from"
+                   style="max-width:190px;" title="Başlangıç tarihi">
+            <input type="datetime-local" class="form-input" id="filter-to"
+                   style="max-width:190px;" title="Bitiş tarihi">
+
+            <button class="btn btn-ghost btn-sm" id="btn-clear-filters">Temizle</button>
+        </div>
+
+        <!-- Tablo -->
+        <div class="card" style="padding:0;">
+            <div class="table-wrapper" style="border:none;">
+                <table class="data-table" id="executions-table">
+                    <thead>
+                    <tr>
+                        <th>Senaryo</th>
+                        <th>Durum</th>
+                        <th>Tetikleyen</th>
+                        <th>Kuyruk Zamanı</th>
+                        <th>Süre</th>
+                        <th>Adımlar</th>
+                        <th style="width:60px;"></th>
+                    </tr>
+                    </thead>
+                    <tbody id="executions-body">
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <span class="empty-state-msg">Yükleniyor…</span>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="pagination-wrapper" id="pagination"></div>
+    </main>
+</div>
+
+<!-- Scripts -->
+<script src="../assets/js/utils.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/toast.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/router.js"></script>
+<script src="../js/components/sidebar.js"></script>
+<script src="../js/components/topbar.js"></script>
+<script src="../js/components/pagination.js"></script>
+<script src="../js/pages/executions.js"></script>
 </body>
 </html>

@@ -1,10 +1,329 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroStep — Çalıştırma Detayı</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/layout.css">
+    <style>
+        /* ── Detay ana layout ─────────────────────────────── */
+        .exec-detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        /* ── Özet bar ─────────────────────────────────────── */
+        .exec-summary-bar {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.25rem;
+            padding: 1rem 1.25rem;
+            background: var(--clr-surface);
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-md);
+        }
+        .exec-summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .exec-summary-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--clr-text-muted);
+        }
+        .exec-summary-value {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--clr-text);
+        }
+
+        /* ── Panel başlıkları ─────────────────────────────── */
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .875rem 1rem;
+            border-bottom: 1px solid var(--clr-border);
+        }
+        .panel-title {
+            font-size: .85rem;
+            font-weight: 700;
+            color: var(--clr-text);
+        }
+
+        /* ── Adım listesi ─────────────────────────────────── */
+        .step-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: .75rem;
+            padding: .65rem 1rem;
+            border-bottom: 1px solid var(--clr-border);
+            cursor: pointer;
+            transition: background var(--transition);
+        }
+        .step-item:last-child { border-bottom: none; }
+        .step-item:hover { background: var(--clr-surface-2); }
+        .step-item.expanded { background: var(--clr-surface-2); }
+
+        .step-icon {
+            font-size: 1rem;
+            width: 1.25rem;
+            text-align: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .step-icon-pass  { color: var(--clr-success); }
+        .step-icon-fail  { color: var(--clr-danger); }
+        .step-icon-skip  { color: var(--clr-text-muted); }
+        .step-icon-run   { color: var(--clr-primary); }
+
+        .step-info { flex: 1; min-width: 0; }
+        .step-action {
+            font-size: .8rem;
+            font-weight: 700;
+            font-family: var(--font-ui);
+            color: var(--clr-text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .step-desc {
+            font-size: .75rem;
+            color: var(--clr-text-muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .step-duration {
+            font-size: .72rem;
+            color: var(--clr-text-muted);
+            flex-shrink: 0;
+            align-self: center;
+        }
+
+        /* Hata detay paneli */
+        .step-error-detail {
+            display: none;
+            margin: 0 1rem .75rem calc(1rem + 1.25rem + .75rem);
+            padding: .65rem .875rem;
+            background: rgba(224,82,96,.08);
+            border: 1px solid rgba(224,82,96,.25);
+            border-radius: var(--radius-sm);
+            font-size: .78rem;
+            color: var(--clr-danger);
+            font-family: var(--font-ui);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .step-item.expanded + .step-error-detail { display: block; }
+
+        /* Screenshot butonu */
+        .step-screenshot-btn {
+            font-size: .72rem;
+            color: var(--clr-primary);
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+        }
+        .step-screenshot-btn:hover { color: var(--clr-primary-h); }
+
+        /* ── Log paneli ───────────────────────────────────── */
+        .log-panel {
+            background: var(--clr-surface);
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-md);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 420px;
+        }
+
+        .log-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: .5rem 1rem;
+            font-family: var(--font-ui);
+            font-size: .78rem;
+            line-height: 1.6;
+        }
+        .log-entry { display: flex; gap: .5rem; padding: 1px 0; }
+        .log-time  { color: var(--clr-text-muted); flex-shrink: 0; }
+        .log-level { font-weight: 700; width: 3rem; flex-shrink: 0; }
+        .log-level-info  { color: var(--clr-text-muted); }
+        .log-level-warn  { color: var(--clr-warning); }
+        .log-level-error { color: var(--clr-danger); }
+        .log-level-debug { color: #5a91f8; opacity: .7; }
+        .log-msg { flex: 1; color: var(--clr-text); word-break: break-word; }
+
+        /* SSE bağlantı durumu */
+        .sse-indicator {
+            display: flex;
+            align-items: center;
+            gap: .35rem;
+            font-size: .72rem;
+            color: var(--clr-text-muted);
+        }
+        .sse-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--clr-success);
+            flex-shrink: 0;
+        }
+        .sse-dot.connecting { background: var(--clr-warning); animation: pulse 1s infinite; }
+        .sse-dot.closed     { background: var(--clr-text-muted); }
+        @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+
+        /* ── Spinner badge ────────────────────────────────── */
+        .mini-spin {
+            display: inline-block;
+            width: .65rem;
+            height: .65rem;
+            border: 1.5px solid rgba(255,255,255,.3);
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin .65s linear infinite;
+            vertical-align: middle;
+            margin-right: .2rem;
+        }
+
+        /* ── Responsive ───────────────────────────────────── */
+        @media (max-width: 900px) {
+            .exec-detail-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
+<div id="toast-container"></div>
 
+<div class="app-shell" id="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <header class="topbar" id="topbar"></header>
+
+    <main class="main-content" id="exec-main">
+        <!-- Header -->
+        <div class="page-header" id="exec-page-header">
+            <div class="page-header-left">
+                <nav style="font-size:.82rem;color:var(--clr-text-muted);margin-bottom:.35rem;">
+                    <a href="executions.html" style="color:var(--clr-text-muted);">Çalıştırmalar</a>
+                    <span style="margin:0 .4rem;opacity:.4;">/</span>
+                    <span id="breadcrumb-scenario">Yükleniyor…</span>
+                </nav>
+                <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+                    <h2 class="page-title" id="exec-title">Çalıştırma Detayı</h2>
+                    <span id="exec-status-badge"></span>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:.5rem;">
+                <button class="btn btn-ghost btn-sm" id="btn-pdf" title="PDF İndir">
+                    ↓ PDF
+                </button>
+                <button class="btn btn-ghost btn-sm" id="btn-excel" title="Excel İndir">
+                    ↓ Excel
+                </button>
+                <button class="btn btn-danger btn-sm hidden" id="btn-cancel">
+                    ✕ İptal Et
+                </button>
+            </div>
+        </div>
+
+        <!-- Özet Bar -->
+        <div class="exec-summary-bar" id="exec-summary">
+            <div class="exec-summary-item">
+                <span class="exec-summary-label">Tetikleyen</span>
+                <span class="exec-summary-value" id="sum-trigger">—</span>
+            </div>
+            <div class="exec-summary-item">
+                <span class="exec-summary-label">Başlangıç</span>
+                <span class="exec-summary-value" id="sum-started">—</span>
+            </div>
+            <div class="exec-summary-item">
+                <span class="exec-summary-label">Bitiş</span>
+                <span class="exec-summary-value" id="sum-finished">—</span>
+            </div>
+            <div class="exec-summary-item">
+                <span class="exec-summary-label">Süre</span>
+                <span class="exec-summary-value" id="sum-duration">—</span>
+            </div>
+            <div class="exec-summary-item">
+                <span class="exec-summary-label">Adımlar</span>
+                <span class="exec-summary-value" id="sum-steps">—</span>
+            </div>
+            <div class="exec-summary-item">
+                <span class="exec-summary-label">Başarı</span>
+                <span class="exec-summary-value" id="sum-pass">—</span>
+            </div>
+        </div>
+
+        <!-- İki Panel -->
+        <div class="exec-detail-grid">
+
+            <!-- Sol: Adım Sonuçları -->
+            <div>
+                <div class="card" style="padding:0;height:100%;">
+                    <div class="panel-header">
+                        <span class="panel-title">Adım Sonuçları</span>
+                        <span id="step-count-label" class="small text-muted"></span>
+                    </div>
+                    <div style="max-height:520px;overflow-y:auto;" id="steps-scroll">
+                        <ul class="step-list" id="steps-list">
+                            <li style="padding:2rem;text-align:center;color:var(--clr-text-muted);font-size:.85rem;">
+                                Yükleniyor…
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sağ: Canlı Log -->
+            <div class="log-panel">
+                <div class="panel-header">
+                    <span class="panel-title">Canlı Loglar</span>
+                    <div style="display:flex;align-items:center;gap:.75rem;">
+                        <div class="sse-indicator" id="sse-indicator">
+                            <span class="sse-dot connecting" id="sse-dot"></span>
+                            <span id="sse-label">Bağlanıyor…</span>
+                        </div>
+                        <button class="btn-icon" id="btn-log-clear" title="Logları Temizle" style="font-size:.75rem;padding:.25rem .5rem;">
+                            ✕
+                        </button>
+                    </div>
+                </div>
+                <div class="log-list" id="log-list"></div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- Scripts -->
+<script src="../assets/js/utils.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/toast.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/router.js"></script>
+<script src="../js/components/sidebar.js"></script>
+<script src="../js/components/topbar.js"></script>
+<script src="../js/components/modal.js"></script>
+<script src="../js/components/confirm-dialog.js"></script>
+<script src="../js/pages/execution-detail.js"></script>
 </body>
 </html>

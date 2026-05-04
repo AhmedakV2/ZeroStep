@@ -39,6 +39,7 @@ let autoSaveTimer = null;
     setupCanvasInteraction();
     setupDropZone();
     setupPropsActions();
+    setupAddStepButton();
 
     await Promise.all([
         loadActionMetadata(),
@@ -72,9 +73,16 @@ async function loadScenario() {
 async function loadActionMetadata() {
     try {
         actionMetadata = await Api.get('/steps/action-metadata');
+        if (!Array.isArray(actionMetadata)) {
+            actionMetadata = [];
+            Toast.warning('Action metadata beklenen formatta değil');
+            return;
+        }
         renderToolPalette(actionMetadata);
     } catch (err) {
-        Toast.error('Action metadata alınamadı');
+        Toast.error('Action metadata alınamadı: ' + (err.message || 'Bilinmeyen hata'));
+        console.error('Metadata load failed:', err);
+        actionMetadata = [];
     }
 }
 
@@ -756,12 +764,97 @@ function setAutosaveState(state) {
 
 // ── Props Panel Butonları ─────────────────────────────────
 function setupPropsActions() {
-    document.getElementById('btn-duplicate').addEventListener('click', () => {
+    document.getElementById('btn-duplicate')?.addEventListener('click', () => {
         if (selectedStepId) duplicateStep(selectedStepId);
     });
 
-    document.getElementById('btn-delete').addEventListener('click', () => {
+    document.getElementById('btn-delete')?.addEventListener('click', () => {
         if (selectedStepId) deleteStep(selectedStepId);
+    });
+}
+
+// ── Adım Ekle Butonu ───────────────────────────────────────
+function setupAddStepButton() {
+    const addStepBtn = document.getElementById('btn-add-step');
+    if (addStepBtn) {
+        addStepBtn.addEventListener('click', showAddStepModal);
+    }
+}
+
+function showAddStepModal() {
+    if (actionMetadata.length === 0) {
+        Toast.warning('Action types henüz yüklenmedi');
+        return;
+    }
+
+    // Action types'ları kategoriyle grupla
+    const groups = {};
+    actionMetadata.forEach(m => {
+        if (!groups[m.category]) groups[m.category] = [];
+        groups[m.category].push(m);
+    });
+
+    const content = `
+        <form id="add-step-form" style="margin-top:1.5rem;">
+            <div class="form-group">
+                <label class="form-label">İşlem Türü *</label>
+                <select class="form-input" id="new-step-action-type" required style="margin-bottom:1.5rem;">
+                    <option value="">— Seçin —</option>
+                    ${Object.entries(groups).map(([category, items]) => `
+                        <optgroup label="${Utils.escHtml(category)}">
+                            ${items.map(item => `
+                                <option value="${Utils.escHtml(item.actionType)}">
+                                    ${Utils.escHtml(item.displayName || item.actionType)}
+                                </option>
+                            `).join('')}
+                        </optgroup>
+                    `).join('')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Açıklama (İsteğe Bağlı)</label>
+                <textarea class="form-input" id="new-step-description" rows="2" placeholder="Bu adımın ne yapacağını açıklayın..."></textarea>
+            </div>
+        </form>
+    `;
+
+    Modal.open({
+        title: 'Yeni Adım Ekle',
+        contentHTML: content,
+        confirmLabel: 'Ekle',
+        size: 'sm',
+        onConfirm: async () => {
+            const actionType = document.getElementById('new-step-action-type')?.value;
+            const description = document.getElementById('new-step-description')?.value || '';
+
+            if (!actionType) {
+                Toast.warning('Lütfen işlem türü seçin');
+                return;
+            }
+
+            try {
+                const newStep = await Api.post(`/scenarios/${scenarioPublicId}/steps`, {
+                    actionType,
+                    description,
+                });
+
+                // Novo node pozisyonu
+                nodePositions[newStep.publicId] = {
+                    x: 100 + Math.random() * 200,
+                    y: 100 + Math.random() * 150,
+                };
+
+                steps.push(newStep);
+                steps.sort((a, b) => a.stepOrder - b.stepOrder);
+
+                renderAll();
+                selectStep(newStep.publicId);
+                Modal.close();
+                Toast.success('Adım eklendi');
+            } catch (err) {
+                Toast.error('Adım eklenemedi: ' + (err.message || 'Bilinmeyen hata'));
+            }
+        }
     });
 }
 
