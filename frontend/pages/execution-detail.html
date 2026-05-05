@@ -10,22 +10,126 @@
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/layout.css">
     <style>
-        .exec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; }
-        .exec-stats { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
-        .stat { display: flex; flex-direction: column; gap: 0.25rem; }
-        .stat-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); }
-        .stat-value { font-size: 1rem; font-weight: 600; color: var(--clr-text); }
-        .steps-list { list-style: none; padding: 0; }
-        .step-item { padding: 0.75rem; border-bottom: 1px solid var(--clr-border); cursor: pointer; }
+        .exec-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+        .exec-stats {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.25rem;
+        }
+        .stat {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .stat-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--clr-text-muted);
+            letter-spacing: .04em;
+        }
+        .stat-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--clr-text);
+        }
+
+        /* Adım listesi */
+        .steps-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 480px;
+            overflow-y: auto;
+        }
+        .steps-list::-webkit-scrollbar { width: 4px; }
+        .steps-list::-webkit-scrollbar-thumb { background: var(--clr-border); border-radius: 2px; }
+
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            padding: 0.6rem 0.875rem;
+            border-bottom: 1px solid var(--clr-border);
+            transition: background var(--transition);
+        }
+        .step-item:last-child { border-bottom: none; }
         .step-item:hover { background: var(--clr-surface-2); }
-        .step-icon { font-size: 1.2rem; margin-right: 0.5rem; }
-        .log-panel { background: #1a1a1a; border-radius: 0.5rem; padding: 1rem; font-family: 'IBM Plex Mono', monospace; height: 400px; overflow-y: auto; }
-        .log-line { font-size: 0.8rem; line-height: 1.5; margin-bottom: 0.25rem; }
-        .log-info { color: #e0e0e0; }
-        .log-warn { color: #ffc107; }
-        .log-error { color: #f44336; }
-        .log-debug { color: #90caf9; }
-        @media (max-width: 900px) { .exec-grid { grid-template-columns: 1fr; } }
+
+        /* Log paneli */
+        .log-panel {
+            background: #0a0c10;
+            border-radius: var(--radius-sm);
+            padding: 0.75rem;
+            font-family: 'IBM Plex Mono', 'Consolas', monospace;
+            height: 460px;
+            overflow-y: auto;
+            border: 1px solid var(--clr-border);
+        }
+        .log-panel::-webkit-scrollbar { width: 4px; }
+        .log-panel::-webkit-scrollbar-thumb { background: var(--clr-border); border-radius: 2px; }
+
+        /* SSE durum göstergesi */
+        .sse-status-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.72rem;
+            color: var(--clr-text-muted);
+        }
+        .sse-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #616161;
+            flex-shrink: 0;
+            transition: background 0.3s;
+        }
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(76,175,80,.4); }
+            50%       { opacity: .7; box-shadow: 0 0 0 4px rgba(76,175,80,0); }
+        }
+
+        /* Kart */
+        .detail-card {
+            background: var(--clr-surface);
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-sm);
+        }
+        .detail-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.875rem;
+            padding-bottom: 0.6rem;
+            border-bottom: 1px solid var(--clr-border);
+        }
+        .detail-card-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--clr-text);
+        }
+
+        /* İptal butonu için ipucu */
+        #exec-id-display {
+            font-family: var(--font-ui);
+            font-size: 0.72rem;
+            color: var(--clr-text-muted);
+            margin-top: 0.2rem;
+            word-break: break-all;
+        }
+
+        @media (max-width: 900px) {
+            .exec-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -33,31 +137,45 @@
 
 <div class="app-shell">
     <aside class="sidebar" id="sidebar"></aside>
+    <header class="topbar" id="topbar"></header>
+
     <main class="main-content">
-        <header class="topbar" id="topbar"></header>
         <div style="padding: 1.5rem 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--clr-text);" id="exec-title">Çalıştırma Detayı</h2>
-                <div style="display: flex; gap: 0.5rem;">
-                    <button id="btn-pdf" class="btn btn-ghost btn-sm">📄 PDF</button>
-                    <button id="btn-excel" class="btn btn-ghost btn-sm">📊 Excel</button>
-                    <button id="btn-cancel" class="btn btn-danger btn-sm" style="display: none;">✕ İptal Et</button>
+
+            <!-- Başlık + aksiyonlar -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;gap:1rem;">
+                <div style="min-width:0;">
+                    <h2 id="exec-title"
+                        style="font-size:1.25rem;font-weight:700;color:var(--clr-text);
+                               white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        Yükleniyor...
+                    </h2>
+                    <!-- ID JS tarafından doldurulur -->
+                    <div id="exec-id-display"></div>
+                </div>
+                <div style="display:flex;gap:.5rem;flex-shrink:0;">
+                    <button id="btn-pdf"    class="btn btn-ghost btn-sm">PDF</button>
+                    <button id="btn-excel"  class="btn btn-ghost btn-sm">Excel</button>
+                    <button id="btn-cancel" class="btn btn-danger btn-sm" style="display:none;">
+                        ✕ İptal Et
+                    </button>
                 </div>
             </div>
 
-            <div class="premium-card" style="margin-bottom: 1rem;">
-                <div class="exec-stats" id="exec-stats">
+            <!-- Özet istatistikler -->
+            <div class="detail-card" style="margin-bottom:1.25rem;">
+                <div class="exec-stats">
                     <div class="stat">
                         <span class="stat-label">Durum</span>
                         <span class="stat-value" id="stat-status">—</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Tetikleyen</span>
-                        <span class="stat-value" id="stat-trigger" style="font-size: 0.9rem;">—</span>
+                        <span class="stat-value" id="stat-trigger" style="font-size:.9rem;">—</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Başlangıç</span>
-                        <span class="stat-value" style="font-size: 0.9rem;" id="stat-started">—</span>
+                        <span class="stat-value" id="stat-started" style="font-size:.9rem;">—</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Süre</span>
@@ -70,20 +188,39 @@
                 </div>
             </div>
 
+            <!-- Grid: adımlar + loglar -->
             <div class="exec-grid">
-                <!-- SOL: ADIM SONUÇLARI -->
-                <div class="premium-card">
-                    <h3 style="margin-bottom: 1rem; font-size: 0.95rem; color: var(--clr-text);">Adım Sonuçları</h3>
+
+                <!-- SOL: Adım Sonuçları -->
+                <div class="detail-card">
+                    <div class="detail-card-header">
+                        <span class="detail-card-title">Adım Sonuçları</span>
+                        <span id="step-count" style="font-size:.72rem;color:var(--clr-text-muted);"></span>
+                    </div>
                     <ul class="steps-list" id="steps-list">
-                        <li style="padding: 1rem; text-align: center; color: var(--clr-text-muted);">Yükleniyor…</li>
+                        <li style="padding:2rem;text-align:center;color:var(--clr-text-muted);">
+                            <span class="spinner"
+                                  style="width:1rem;height:1rem;display:inline-block;
+                                         border-color:var(--clr-border);
+                                         border-top-color:var(--clr-primary);"></span>
+                        </li>
                     </ul>
                 </div>
 
-                <!-- SAĞ: LOG PANEL -->
-                <div class="premium-card">
-                    <h3 style="margin-bottom: 1rem; font-size: 0.95rem; color: var(--clr-text);">Canlı Loglar</h3>
-                    <div class="log-panel" id="log-panel"></div>
+                <!-- SAĞ: Canlı Log -->
+                <div class="detail-card">
+                    <div class="detail-card-header">
+                        <span class="detail-card-title">Canlı Loglar</span>
+                        <div class="sse-status-bar">
+                            <div class="sse-dot" id="sse-dot"></div>
+                            <span id="sse-label">—</span>
+                        </div>
+                    </div>
+                    <div class="log-panel" id="log-panel">
+                        <!-- JS tarafından doldurulur -->
+                    </div>
                 </div>
+
             </div>
         </div>
     </main>

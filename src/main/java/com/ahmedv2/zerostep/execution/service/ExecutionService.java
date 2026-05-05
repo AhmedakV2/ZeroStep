@@ -22,6 +22,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.Map;
@@ -33,51 +35,48 @@ import java.util.UUID;
 @Slf4j
 public class ExecutionService {
 
-    // Kullanici basina ayni anda max kac execution
     private static final int MAX_CONCURRENT_PER_USER = 3;
 
-    private final ExecutionRepository executionRepository;
+    private final ExecutionRepository           executionRepository;
     private final ExecutionStepResultRepository stepResultRepository;
-    private final ExecutionLogRepository logRepository;
-    private final ScenarioRepository scenarioRepository;
-    private final TestStepRepository stepRepository;
-    private final UserRepository userRepository;
-    private final ExecutionRunner executionRunner;
-    private final AuditService auditService;
+    private final ExecutionLogRepository        logRepository;
+    private final ScenarioRepository            scenarioRepository;
+    private final TestStepRepository            stepRepository;
+    private final UserRepository                userRepository;
+    private final ExecutionRunner               executionRunner;
+    private final AuditService                  auditService;
 
-    // ============================================================
-    // BAS LATMA
-    // ============================================================
+    // ── Başlatma ──────────────────────────────────────────
     @Transactional
-    public ExecutionResponse startExecution(UUID scenarioPublicId, ExecutionStartRequest request,
-                                            String username, Set<String> roles) {
+    public ExecutionResponse startExecution(UUID scenarioPublicId,
+                                            ExecutionStartRequest request,
+                                            String username,
+                                            Set<String> roles) {
+
         Scenario scenario = scenarioRepository.findByPublicIdActive(scenarioPublicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Scenario", scenarioPublicId));
 
         checkExecuteAccess(scenario, username, roles);
 
         if (scenario.getStatus() == ScenarioStatus.ARCHIVED) {
-            throw new ForbiddenException("Arsivlenmis senaryo calistirilamaz");
+            throw new ForbiddenException("Arşivlenmiş senaryo çalıştırılamaz");
         }
 
-        // Senaryoda en az 1 aktif step var mi?
         long stepCount = stepRepository.countByScenarioIdAndDeletedAtIsNull(scenario.getId());
         if (stepCount == 0) {
-            throw new ConflictException("Senaryoda calistirilacak adim yok");
+            throw new ConflictException("Senaryoda çalıştırılacak adım yok");
         }
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", username));
 
-        // Concurrent execution limiti
         long activeCount = executionRepository.countActiveByUser(user.getId());
         if (activeCount >= MAX_CONCURRENT_PER_USER) {
             throw new ConflictException(
-                    "Maksimum " + MAX_CONCURRENT_PER_USER +
-                            " paralel execution calistirabilirsiniz; aktif: " + activeCount);
+                    "Maksimum " + MAX_CONCURRENT_PER_USER
+                            + " paralel execution çalıştırabilirsiniz; aktif: " + activeCount);
         }
 
-        // Execution kaydi olustur
         Execution execution = new Execution();
         execution.setScenario(scenario);
         execution.setTriggeredBy(user);
@@ -86,24 +85,44 @@ public class ExecutionService {
         execution.setStatus(ExecutionStatus.QUEUED);
 
         Execution saved = executionRepository.save(execution);
-        log.info("Execution kuyruga alindi: id={} scenario={} user={}",
-                saved.getId(), scenario.getName(), username);
+        final Long savedId = saved.getId();
 
-        auditService.record("EXECUTION_STARTED", "EXECUTION", saved.getId(),
-                Map.of("scenarioId", scenario.getId(),
+        log.info("Execution kuyruğa alındı: id={} scenario={} user={}",
+                savedId, scenario.getName(), username);
+
+        auditService.record("EXECUTION_STARTED", "EXECUTION", savedId,
+                Map.of("scenarioId",   scenario.getId(),
                         "scenarioName", scenario.getName(),
-                        "stepCount", stepCount));
+                        "stepCount",    stepCount));
 
-        // Async runner'i tetikle; transaction commit'inden sonra calismasi icin
-        // ayni transaction icinde @Async cagirinca Spring zaten ayri thread'e atar
-        executionRunner.run(saved.getId());
+        /*
+         * KÖK NEDEN DÜZELTMESİ
+         * ─────────────────────
+         * Eski kod: executionRunner.run(savedId)
+         *   → @Async yeni thread'i HEMEN başlatır.
+         *   → Bu metod hâlâ @Transactional içinde → DB COMMIT olmadı.
+         *   → Runner findByIdWithAllRelations() ile sorguladığında
+         *     kayıt DB'de yok → "Execution bulunamadı: 14" hatası.
+         *
+         * Yeni kod: TransactionSynchronizationManager.registerSynchronization()
+         *   → afterCommit() hook'u transaction COMMIT'İNDEN SONRA çalışır.
+         *   → O an kayıt DB'de kesinlikle mevcut.
+         *   → @Async runner thread-safe biçimde başlatılır.
+         */
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        log.debug("TX commit OK → ExecutionRunner başlatılıyor: id={}", savedId);
+                        executionRunner.run(savedId);
+                    }
+                }
+        );
 
         return toResponse(saved);
     }
 
-    // ============================================================
-    // SORGU
-    // ============================================================
+    // ── Sorgular ──────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public ExecutionResponse getExecution(UUID publicId, String username, Set<String> roles) {
@@ -113,21 +132,21 @@ public class ExecutionService {
     }
 
     @Transactional(readOnly = true)
-    public List<ExecutionStepResultResponse> getStepResults(UUID publicId, String username, Set<String> roles) {
+    public List<ExecutionStepResultResponse> getStepResults(UUID publicId,
+                                                            String username,
+                                                            Set<String> roles) {
         Execution execution = findExecutionOrThrow(publicId);
         checkReadAccess(execution.getScenario(), username, roles);
-
         return stepResultRepository.findByExecutionIdOrdered(execution.getId()).stream()
                 .map(this::toStepResultResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public Page<ExecutionLogResponse> getLogs(UUID publicId, String username, Set<String> roles,
-                                              Pageable pageable) {
+    public Page<ExecutionLogResponse> getLogs(UUID publicId, String username,
+                                              Set<String> roles, Pageable pageable) {
         Execution execution = findExecutionOrThrow(publicId);
         checkReadAccess(execution.getScenario(), username, roles);
-
         return logRepository.findByExecutionId(execution.getId(), pageable)
                 .map(this::toLogResponse);
     }
@@ -138,73 +157,62 @@ public class ExecutionService {
         Scenario scenario = scenarioRepository.findByPublicIdActive(scenarioPublicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Scenario", scenarioPublicId));
         checkReadAccess(scenario, username, roles);
-
         return executionRepository.findByScenarioId(scenario.getId(), pageable)
                 .map(this::toResponse);
     }
 
-    // ============================================================
-    // CANCEL
-    // ============================================================
+    // ── İptal ─────────────────────────────────────────────
     @Transactional
     public ExecutionResponse cancelExecution(UUID publicId, String username, Set<String> roles) {
         Execution execution = findExecutionOrThrow(publicId);
         checkExecuteAccess(execution.getScenario(), username, roles);
 
         if (execution.getStatus().isTerminal()) {
-            throw new ConflictException("Bu execution zaten tamamlanmis: " + execution.getStatus());
+            throw new ConflictException(
+                    "Bu execution zaten tamamlanmış: " + execution.getStatus());
         }
 
-        // QUEUED ise direkt CANCELLED'a gec; runner bunu zaten gormeyecek
-        // RUNNING ise runner'a flag gonder; runner bir sonraki step oncesi gorur
         if (execution.getStatus() == ExecutionStatus.QUEUED) {
             execution.setStatus(ExecutionStatus.CANCELLED);
             execution.setCancelledBy(username);
             executionRepository.save(execution);
         } else {
-            // RUNNING; cancel flag set
             boolean signaled = executionRunner.requestCancel(execution.getId());
             if (signaled) {
                 execution.setCancelledBy(username);
                 executionRepository.save(execution);
-                log.info("Cancel sinyali gonderildi: id={}", execution.getId());
-            } else {
-                log.warn("Cancel sinyali gonderilemedi (runner yok): id={}", execution.getId());
             }
         }
 
         auditService.record("EXECUTION_CANCELLED", "EXECUTION", execution.getId(),
                 Map.of("scenarioId", execution.getScenario().getId(),
-                        "username", username));
+                        "username",   username));
 
         return toResponse(execution);
     }
 
-    // ============================================================
-    // YARDIMCILAR
-    // ============================================================
+    // ── Yardımcı ──────────────────────────────────────────
 
     private Execution findExecutionOrThrow(UUID publicId) {
+        // JOIN FETCH → lazy proxy "no session" hatasını önler
         return executionRepository.findByPublicIdWithScenario(publicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Execution", publicId));
     }
 
-    // Okuma: senaryo erisim kurali ile ayni
     private void checkReadAccess(Scenario s, String username, Set<String> roles) {
         if (roles.contains("ROLE_ADMIN") || roles.contains("ROLE_VIEWER")) return;
         if (!s.getOwner().getUsername().equals(username)) {
-            throw new ForbiddenException("Bu execution'a erisim yetkiniz yok");
+            throw new ForbiddenException("Bu execution'a erişim yetkiniz yok");
         }
     }
 
-    // Calistirma: VIEWER asla, TESTER kendi senaryosu, ADMIN her sey
     private void checkExecuteAccess(Scenario s, String username, Set<String> roles) {
         if (roles.contains("ROLE_VIEWER") && !roles.contains("ROLE_ADMIN")) {
-            throw new ForbiddenException("VIEWER rolu ile execution calistirilamaz");
+            throw new ForbiddenException("VIEWER rolü ile execution çalıştırılamaz");
         }
         if (roles.contains("ROLE_ADMIN")) return;
         if (!s.getOwner().getUsername().equals(username)) {
-            throw new ForbiddenException("Bu senaryo size ait degil");
+            throw new ForbiddenException("Bu senaryo size ait değil");
         }
     }
 

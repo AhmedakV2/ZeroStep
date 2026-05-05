@@ -1,17 +1,26 @@
 // Merkezi fetch wrapper; token ekleme, 401 refresh, hata yönetimi
 const Api = (() => {
-    // API adresi backend'i (8080 portunu) tam olarak işaret edecek şekilde güncellendi
     const BASE = 'http://localhost:8080/api/v1';
 
     // 401 sonrası refresh döngüsünü önlemek için flag
     let _refreshing = false;
     let _refreshQueue = [];
 
-    async function _processQueue(error, token) {
+    function _processQueue(error, token) {
         _refreshQueue.forEach(p => error ? p.reject(error) : p.resolve(token));
         _refreshQueue = [];
     }
 
+    /**
+     * Chrome extension "message channel closed" hatasının sebebi:
+     * fetch() Promise'i bir chrome.runtime.onMessage listener içinde
+     * await'lendiğinde listener fonksiyonu Promise döndürür ama
+     * runtime bunu `true` return gibi algılayıp channel'ı açık tutar,
+     * sonra GC kapatır → hata.
+     *
+     * Çözüm: request() içindeki tüm async işlemler kendi try/catch'ine
+     * sahip; dışarıya sızan unhandled rejection yok.
+     */
     async function request(method, path, body = null, skipAuth = false) {
         const headers = { 'Content-Type': 'application/json' };
 
@@ -23,7 +32,14 @@ const Api = (() => {
         const config = { method, headers };
         if (body !== null) config.body = JSON.stringify(body);
 
-        let res = await fetch(BASE + path, config);
+        let res;
+        try {
+            res = await fetch(BASE + path, config);
+        } catch (networkErr) {
+            // Network hatası — sunucuya ulaşılamıyor
+            throw new ApiError(0, 'NETWORK_ERROR',
+                'Sunucuya bağlanılamadı. Backend çalışıyor mu? (' + networkErr.message + ')');
+        }
 
         // Token expire — refresh dene
         if (res.status === 401 && !skipAuth) {
@@ -37,7 +53,11 @@ const Api = (() => {
                 // Diğer istekler yeni token gelene kadar bekler
                 return new Promise((resolve, reject) => {
                     _refreshQueue.push({
-                        resolve: token => { headers['Authorization'] = `Bearer ${token}`; resolve(fetch(BASE + path, { ...config, headers })); },
+                        resolve: token => {
+                            headers['Authorization'] = `Bearer ${token}`;
+                            resolve(fetch(BASE + path, { ...config, headers })
+                                .then(r => _parseResponse(r)));
+                        },
                         reject,
                     });
                 });
@@ -58,31 +78,54 @@ const Api = (() => {
             }
         }
 
-        // Boş response (204 No Content gibi)
+        return _parseResponse(res);
+    }
+
+    async function _parseResponse(res) {
+        // 204 No Content
         if (res.status === 204) return null;
 
-        const json = await res.json().catch(() => null);
-
-        if (!res.ok) {
-            const code = json?.code || 'UNKNOWN_ERROR';
-            const msg  = json?.message || `HTTP ${res.status}`;
-            throw new ApiError(res.status, code, msg, json?.fieldErrors);
+        let json = null;
+        try {
+            json = await res.json();
+        } catch {
+            // JSON parse edilemedi — boş body
+            if (!res.ok) {
+                throw new ApiError(res.status, 'PARSE_ERROR', `HTTP ${res.status}`);
+            }
+            return null;
         }
 
+        if (!res.ok) {
+            const code    = json?.code    || 'UNKNOWN_ERROR';
+            const msg     = json?.message || `HTTP ${res.status}`;
+            const fields  = json?.fieldErrors || null;
+            throw new ApiError(res.status, code, msg, fields);
+        }
+
+        // ApiResponse wrapper: { success, data, message, timestamp }
+        // api.js data'yı unwrap eder; yoksa json'u direkt döner
         return json?.data !== undefined ? json.data : json;
     }
 
     return {
-        get:    (path, params)  => {
-            const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+        get(path, params) {
+            const qs = params && Object.keys(params).length
+                ? '?' + new URLSearchParams(
+                // null/undefined değerleri filtrele
+                Object.fromEntries(
+                    Object.entries(params).filter(([, v]) => v != null)
+                )
+            ).toString()
+                : '';
             return request('GET', path + qs);
         },
-        post:   (path, body)    => request('POST',   path, body),
-        put:    (path, body)    => request('PUT',    path, body),
-        patch:  (path, body)    => request('PATCH',  path, body),
-        del:    (path)          => request('DELETE', path),
-        // skipAuth=true — login/refresh endpoint'leri için
-        postPublic: (path, body) => request('POST', path, body, true),
+        post:       (path, body)  => request('POST',   path, body),
+        put:        (path, body)  => request('PUT',     path, body),
+        patch:      (path, body)  => request('PATCH',   path, body),
+        del:        (path)        => request('DELETE',  path),
+        // skipAuth=true → login/refresh endpoint'leri için
+        postPublic: (path, body)  => request('POST', path, body, true),
     };
 })();
 
@@ -90,8 +133,9 @@ const Api = (() => {
 class ApiError extends Error {
     constructor(status, code, message, fieldErrors = null) {
         super(message);
-        this.status = status;
-        this.code = code;
+        this.name        = 'ApiError';
+        this.status      = status;
+        this.code        = code;
         this.fieldErrors = fieldErrors;
     }
 }

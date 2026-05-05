@@ -1,9 +1,7 @@
 // Dashboard sayfası — stat kartları, son çalıştırmalar, bildirimler
 (async function () {
-    // Auth guard
     if (!Auth.isLoggedIn()) { window.location.href = '../index.html'; return; }
 
-    // Layout bileşenlerini render et
     Sidebar.render('sidebar');
     Topbar.render('topbar', 'Dashboard');
 
@@ -13,53 +11,73 @@
         loadRecentExecutions(),
         loadRecentNotifications(),
     ]);
-
-    // Hızlı senaryo oluştur butonu
-    document.getElementById('quick-create-btn')?.addEventListener('click', openCreateModal);
 })();
 
 // ── Stat Kartları ─────────────────────────────────────────────
 async function loadStats() {
     try {
-        // Raporlar endpoint'inden toplam/başarılı/başarısız
-        const [reportsData, schedulesData] = await Promise.allSettled([
-            Api.get('/reports', { size: 1 }),
-            Api.get('/schedules', { size: 100 }),
-        ]);
+        // GET /api/v1/reports?size=100 → ApiResponse<Page<ReportListItemDto>>
+        const rawExecs = await Api.get('/reports', { size: 100 });
+        // api.js .data'yı unwrap ediyor; Page.content'e eriş
+        let items = [];
+        let totalElements = 0;
 
-        // Tüm execution istatistiklerini hesapla (son 100 kayıt üzerinden özet)
-        const allExecs = await Api.get('/reports', { size: 100 });
-        const items = allExecs?.content ?? [];
+        if (rawExecs?.content) {
+            items = rawExecs.content;
+            totalElements = rawExecs.totalElements ?? items.length;
+        } else if (Array.isArray(rawExecs)) {
+            items = rawExecs;
+            totalElements = items.length;
+        } else if (rawExecs?.data?.content) {
+            items = rawExecs.data.content;
+            totalElements = rawExecs.data.totalElements ?? items.length;
+        }
 
-        const total   = allExecs?.totalElements ?? items.length;
         const passed  = items.filter(e => e.status === 'COMPLETED').length;
         const failed  = items.filter(e => e.status === 'FAILED' || e.status === 'TIMEOUT').length;
 
-        // Aktif schedule sayısı
-        let activeSchedules = 0;
-        if (schedulesData.status === 'fulfilled') {
-            const sData = schedulesData.value;
-            const sItems = sData?.content ?? [];
-            activeSchedules = sItems.filter(s => s.enabled).length;
+        document.getElementById('stat-total').textContent  = totalElements;
+        document.getElementById('stat-passed').textContent = passed;
+        document.getElementById('stat-failed').textContent = failed;
+
+        // Schedule sayısı — ayrı istek
+        try {
+            const rawSched = await Api.get('/schedules', { size: 100 });
+            let schedItems = [];
+            if (rawSched?.content) schedItems = rawSched.content;
+            else if (Array.isArray(rawSched)) schedItems = rawSched;
+            else if (rawSched?.data?.content) schedItems = rawSched.data.content;
+            const activeSchedules = schedItems.filter(s => s.enabled).length;
+            document.getElementById('stat-schedule').textContent = activeSchedules;
+        } catch {
+            document.getElementById('stat-schedule').textContent = '—';
         }
 
-        document.getElementById('stat-total').textContent    = total;
-        document.getElementById('stat-passed').textContent   = passed;
-        document.getElementById('stat-failed').textContent   = failed;
-        document.getElementById('stat-schedule').textContent = activeSchedules;
     } catch (err) {
         console.error('Stat yüklenemedi:', err);
+        ['stat-total','stat-passed','stat-failed','stat-schedule'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '—';
+        });
     }
 }
 
 // ── Son Çalıştırmalar ──────────────────────────────────────────
 async function loadRecentExecutions() {
     const tbody = document.getElementById('executions-body');
-    const wrapper = document.getElementById('executions-table-wrapper');
 
     try {
-        const data = await Api.get('/reports', { size: 10 });
-        const items = data?.content ?? [];
+        // GET /api/v1/reports?size=50 - sort=startedAt,desc
+        const raw = await Api.get('/reports', {
+            size: 50,
+            sort: 'startedAt,desc'
+        });
+        let items = [];
+
+        if (raw?.content) items = raw.content;
+        else if (Array.isArray(raw)) items = raw;
+        else if (raw?.data?.content) items = raw.data.content;
+
 
         if (items.length === 0) {
             tbody.innerHTML = `
@@ -73,14 +91,18 @@ async function loadRecentExecutions() {
             return;
         }
 
-        tbody.innerHTML = items.map(exec => `
-            <tr style="cursor:pointer" data-id="${Utils.escHtml(exec.executionPublicId)}">
-                <td>${Utils.escHtml(exec.scenarioName ?? '—')}</td>
-                <td>${statusBadge(exec.status)}</td>
-                <td>${Utils.formatDuration(exec.durationMs)}</td>
-                <td>${exec.totalSteps ?? 0} adım (${exec.passedSteps ?? 0} geçti)</td>
-                <td>${Utils.formatDate(exec.startedAt)}</td>
-            </tr>`).join('');
+        tbody.innerHTML = items.map(exec => {
+            // ReportListItemDto field isimleri: executionPublicId, scenarioName, status, durationMs, startedAt, passedSteps, totalSteps
+            const execId = exec.executionPublicId || exec.publicId || '';
+            return `
+                <tr style="cursor:pointer" data-id="${Utils.escHtml(execId)}">
+                    <td>${Utils.escHtml(exec.scenarioName ?? '—')}</td>
+                    <td>${statusBadge(exec.status)}</td>
+                    <td>${Utils.formatDuration(exec.durationMs)}</td>
+                    <td>${exec.totalSteps ?? 0} adım (${exec.passedSteps ?? 0} geçti)</td>
+                    <td>${Utils.formatDate(exec.startedAt)}</td>
+                </tr>`;
+        }).join('');
 
         // Satır tıklama → execution detay
         tbody.querySelectorAll('tr[data-id]').forEach(row => {
@@ -88,8 +110,12 @@ async function loadRecentExecutions() {
                 window.location.href = `execution-detail.html?id=${row.dataset.id}`;
             });
         });
+
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="padding:1rem">Veriler yüklenemedi.</td></tr>`;
+        console.error('Son çalıştırmalar yüklenemedi:', err);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="padding:1rem">
+            Veriler yüklenemedi: ${Utils.escHtml(err.message)}
+        </td></tr>`;
     }
 }
 
@@ -98,8 +124,13 @@ async function loadRecentNotifications() {
     const container = document.getElementById('notifications-list');
 
     try {
-        const data = await Api.get('/notifications', { size: 5 });
-        const items = data?.content ?? [];
+        // GET /api/v1/notifications?size=5
+        const raw = await Api.get('/notifications', { size: 5 });
+        let items = [];
+
+        if (raw?.content) items = raw.content;
+        else if (Array.isArray(raw)) items = raw;
+        else if (raw?.data?.content) items = raw.data.content;
 
         if (items.length === 0) {
             container.innerHTML = `
@@ -121,13 +152,13 @@ async function loadRecentNotifications() {
                     ">
                         <span style="font-size:1.1rem;opacity:.6">${notifIcon(n.type)}</span>
                         <div style="flex:1;min-width:0">
-                            <div style="font-size:.88rem;font-weight:${n.read ? 400 : 600};color:var(--clr-text)">
+                            <div style="font-size:.88rem;font-weight:${n.read ? 400 : 600};color:var(--clr-text);">
                                 ${Utils.escHtml(n.title)}
                             </div>
-                            <div style="font-size:.8rem;color:var(--clr-text-muted);margin-top:2px">
+                            <div style="font-size:.8rem;color:var(--clr-text-muted);margin-top:2px;">
                                 ${Utils.escHtml(n.message)}
                             </div>
-                            <div style="font-size:.75rem;color:var(--clr-text-muted);margin-top:4px">
+                            <div style="font-size:.75rem;color:var(--clr-text-muted);margin-top:4px;">
                                 ${Utils.formatDate(n.createdAt)}
                             </div>
                         </div>
@@ -135,78 +166,15 @@ async function loadRecentNotifications() {
                     </li>`).join('')}
             </ul>`;
     } catch (err) {
-        container.innerHTML = `<div class="empty-state"><p class="empty-state-msg">Bildirimler yüklenemedi.</p></div>`;
+        console.error('Bildirimler yüklenemedi:', err);
+        container.innerHTML = `<div class="empty-state">
+            <p class="empty-state-msg">Bildirimler yüklenemedi.</p>
+        </div>`;
     }
 }
 
 // ── Hızlı Senaryo Oluştur Modal ───────────────────────────────
-function openCreateModal() {
-    Modal.open({
-        title: 'Yeni Senaryo Oluştur',
-        contentHTML: `
-            <div style="display:flex;flex-direction:column;gap:1rem">
-                <div class="form-group">
-                    <label class="form-label" for="qs-name">Senaryo Adı *</label>
-                    <input class="form-input" type="text" id="qs-name" placeholder="Örn: Kullanıcı Giriş Testi" maxlength="255">
-                    <span class="form-error" id="qs-name-error"></span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="qs-url">Base URL</label>
-                    <input class="form-input" type="url" id="qs-url" placeholder="https://example.com">
-                    <span class="form-error" id="qs-url-error"></span>
-                </div>
-                <div id="qs-error" class="alert alert-danger hidden"></div>
-            </div>`,
-        confirmLabel: 'Oluştur',
-        onConfirm: createScenario,
-    });
-
-    // Odaklan
-    setTimeout(() => document.getElementById('qs-name')?.focus(), 60);
-}
-
-async function createScenario(modalEl) {
-    const name    = (document.getElementById('qs-name')?.value ?? '').trim();
-    const baseUrl = (document.getElementById('qs-url')?.value ?? '').trim();
-    const errEl   = document.getElementById('qs-error');
-
-    // Client-side validasyon
-    document.getElementById('qs-name-error').textContent = '';
-    document.getElementById('qs-url-error').textContent  = '';
-    errEl.classList.add('hidden');
-
-    if (Utils.isBlank(name)) {
-        document.getElementById('qs-name-error').textContent = 'Senaryo adı zorunlu';
-        document.getElementById('qs-name').classList.add('is-error');
-        throw new Error('validation'); // Modal butonu disabled kalır
-    }
-
-    try {
-        const created = await Api.post('/scenarios', {
-            name,
-            baseUrl: baseUrl || undefined,
-        });
-        Modal.close();
-        Toast.success(`"${created.name}" senaryosu oluşturuldu.`);
-        // Senaryo detayına yönlendir
-        window.location.href = `scenario-detail.html?id=${created.publicId}`;
-    } catch (err) {
-        if (err instanceof ApiError) {
-            // Field error varsa ilgili alana bağla
-            if (err.fieldErrors?.name) {
-                document.getElementById('qs-name-error').textContent = err.fieldErrors.name;
-                document.getElementById('qs-name').classList.add('is-error');
-            } else {
-                errEl.textContent = err.message;
-                errEl.classList.remove('hidden');
-            }
-        } else if (err.message !== 'validation') {
-            errEl.textContent = 'Senaryo oluşturulamadı. Tekrar deneyin.';
-            errEl.classList.remove('hidden');
-        }
-        throw err; // Butonu disabled'dan kurtar
-    }
-}
+// Fonksiyon kaldırıldı
 
 // ── Yardımcı fonksiyonlar ──────────────────────────────────────
 function statusBadge(status) {
@@ -217,13 +185,20 @@ function statusBadge(status) {
         TIMEOUT:   'badge-warning',
         RUNNING:   'badge-primary',
         QUEUED:    'badge-neutral',
+        PENDING:   'badge-neutral',
     };
     const cls = map[status] ?? 'badge-neutral';
     const labels = {
-        COMPLETED: 'Tamamlandı', FAILED: 'Başarısız', CANCELLED: 'İptal',
-        TIMEOUT: 'Zaman Aşımı', RUNNING: 'Çalışıyor', QUEUED: 'Kuyrukta',
+        COMPLETED: 'Tamamlandı',
+        FAILED: 'Başarısız',
+        CANCELLED: 'İptal Edildi',
+        TIMEOUT: 'Zaman Aşımı',
+        RUNNING: 'Çalışıyor',
+        QUEUED: 'Kuyrukta',
+        PENDING: 'Beklemede',
     };
-    return `<span class="badge ${cls}">${labels[status] ?? status}</span>`;
+    const displayLabel = labels[status] ?? (status || 'Bilinmiyor');
+    return `<span class="badge ${cls}">${displayLabel}</span>`;
 }
 
 function notifIcon(type) {

@@ -1,6 +1,5 @@
 package com.ahmedv2.zerostep.security.filter;
 
-
 import com.ahmedv2.zerostep.common.response.ApiError;
 import com.ahmedv2.zerostep.security.jwt.JwtTokenProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,11 +20,15 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class PasswordChangeRequiredFilter extends OncePerRequestFilter {
 
-    private static final Set<String> ALLOWED_PATHS = Set.of(
+    // Şifre değişikliği zorunlu olsa bile erişilebilir path'ler
+    private static final Set<String> ALLOWED_PREFIXES = Set.of(
             "/api/v1/users/me/change-password",
             "/api/v1/users/me",
-            "/api/v1/auth/logout"
+            "/api/v1/auth/"
     );
+
+    // SSE endpoint'i — EventSource bağlantısını bloke etme
+    private static final String SSE_SUFFIX = "/stream";
 
     private final JwtTokenProvider jwtTokenProvider;
     private final ObjectMapper objectMapper;
@@ -33,41 +36,54 @@ public class PasswordChangeRequiredFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
-                                    @NonNull FilterChain filterChain) throws ServletException, IOException{
+                                    @NonNull FilterChain filterChain)
+            throws ServletException, IOException {
+
+        String path = request.getRequestURI();
+
+        // SSE stream endpoint'i — hiçbir zaman bloke etme
+        if (path.endsWith(SSE_SUFFIX)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         String token = extractToken(request);
-        if(token != null && jwtTokenProvider.isValid(token)
-            && jwtTokenProvider.isPasswordChangeRequired(token)) {
-
-            String path = request.getRequestURI();
-            if (!isAllowedPath(path)) {
-                writeForrbidden(response,path);
-                return;
-            }
+        if (token != null
+                && jwtTokenProvider.isValid(token)
+                && jwtTokenProvider.isPasswordChangeRequired(token)
+                && !isAllowedPath(path)) {
+            writeForbidden(response, path);
+            return;
         }
-        filterChain.doFilter(request,response);
+
+        filterChain.doFilter(request, response);
     }
 
-    private boolean isAllowedPath(String path){
-        return ALLOWED_PATHS.stream().anyMatch(path::startsWith)
-                || path.startsWith("/api/v1/auth/");
+    private boolean isAllowedPath(String path) {
+        return ALLOWED_PREFIXES.stream().anyMatch(path::startsWith);
     }
 
-    private String extractToken(HttpServletRequest request){
+    private String extractToken(HttpServletRequest request) {
         String bearer = request.getHeader("Authorization");
-        if(bearer != null && bearer.startsWith("Bearer ")){
+        if (bearer != null && bearer.startsWith("Bearer ")) {
             return bearer.substring(7).trim();
+        }
+        // SSE token query param
+        if (request.getRequestURI().endsWith("/stream")) {
+            return request.getParameter("token");
         }
         return null;
     }
 
-    private void writeForrbidden(HttpServletResponse response,String path) throws  IOException{
+    private void writeForbidden(HttpServletResponse response, String path) throws IOException {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
-        ApiError err = ApiError.of("PASSWORD_CHANGE_REQUIRED",
-                "Bu hesap icin sifre degisikligi zorunlu. Lutfen once sifrenizi degistirin.",
-                path);
+        ApiError err = ApiError.of(
+                "PASSWORD_CHANGE_REQUIRED",
+                "Şifre değişikliği zorunlu. Lütfen önce şifrenizi değiştirin.",
+                path
+        );
         response.getWriter().write(objectMapper.writeValueAsString(err));
     }
 }

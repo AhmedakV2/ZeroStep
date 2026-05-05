@@ -1,4 +1,4 @@
-// Faz F7 — Raporlar
+// Raporlar sayfası
 let currentPage = 0;
 const PAGE_SIZE = 20;
 
@@ -16,23 +16,26 @@ function switchTab(tab, e) {
     e.preventDefault();
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    event.target.classList.add('active');
+    e.target.classList.add('active');
     document.getElementById(`tab-${tab}`).classList.add('active');
 }
 
 function setupTabs() {
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => switchTab(btn.textContent.includes('Çalış') ? 'executions' : 'scenarios', e));
+        btn.addEventListener('click', (e) => {
+            const isExec = btn.textContent.includes('Çalış') || btn.textContent.includes('Liste');
+            switchTab(isExec ? 'executions' : 'scenarios', e);
+        });
     });
 }
 
 function setupFilters() {
-    document.getElementById('btn-filter').addEventListener('click', () => {
+    document.getElementById('btn-filter')?.addEventListener('click', () => {
         currentPage = 0;
         loadExecutionsReport();
     });
 
-    document.getElementById('select-scenario').addEventListener('change', async (e) => {
+    document.getElementById('select-scenario')?.addEventListener('change', async (e) => {
         if (!e.target.value) {
             document.getElementById('scenario-empty').style.display = 'block';
             document.getElementById('scenario-summary').style.display = 'none';
@@ -44,62 +47,91 @@ function setupFilters() {
     });
 }
 
+// ─── Execution Rapor Listesi ───────────────────────────────────
 async function loadExecutionsReport() {
+    const tbody = document.getElementById('executions-tbody');
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="5" style="padding:2rem;text-align:center;color:var(--clr-text-muted);">
+            Yükleniyor...
+        </td></tr>`;
+    }
+
     try {
         const params = buildCleanParams();
+        // GET /api/v1/reports → ApiResponse<Page<ReportListItemDto>>
+        const raw = await Api.get('/reports', params);
 
-        const response = await Api.get('/reports', params);
-        let items = [];
-        if (Array.isArray(response)) items = response;
-        else if (response?.content) items = response.content;
-        else if (response?.data?.content) items = response.data.content;
+        let items    = [];
+        let pageData = {};
+
+        if (raw?.content) {
+            items    = raw.content;
+            pageData = raw;
+        } else if (Array.isArray(raw)) {
+            items    = raw;
+            pageData = { totalPages: 1, totalElements: raw.length, number: 0 };
+        } else {
+            items    = [];
+            pageData = { totalPages: 0, totalElements: 0, number: 0 };
+        }
 
         renderExecutions(items);
-        renderPagination(response);
+        renderPagination(pageData);
     } catch (err) {
         Toast.error('Yükleme hatası: ' + err.message);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="5" style="padding:2rem;text-align:center;color:var(--clr-danger);">
+                Veriler yüklenemedi.
+            </td></tr>`;
+        }
     }
 }
 
 function buildCleanParams() {
-    const params = { page: currentPage, size: PAGE_SIZE, sort: 'id,desc' };
+    const params = { page: currentPage, size: PAGE_SIZE, sort: 'startedAt,desc' };
     const scenarioEl = document.getElementById('filter-scenario');
-    const statusEl = document.getElementById('filter-status');
+    const statusEl   = document.getElementById('filter-status');
 
-    if (scenarioEl && scenarioEl.value.trim() !== '') params.scenarioName = scenarioEl.value.trim();
-    if (statusEl && statusEl.value && statusEl.value !== 'Tümü') params.status = statusEl.value;
+    if (scenarioEl?.value?.trim()) params.scenarioName = scenarioEl.value.trim();
+    if (statusEl?.value && statusEl.value !== 'Tümü' && statusEl.value !== '') {
+        params.status = statusEl.value;
+    }
 
     return params;
 }
 
 function renderExecutions(items) {
     const tbody = document.getElementById('executions-tbody');
-    if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="padding: 2rem; text-align: center; color: var(--clr-text-muted);">Kayıt bulunamadı</td></tr>`;
+    if (!tbody) return;
+
+    if (!items || items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5">
+            <div class="empty-state">
+                <span class="empty-state-icon">▶</span>
+                <p class="empty-state-msg">Kayıt bulunamadı</p>
+            </div>
+        </td></tr>`;
         return;
     }
 
     tbody.innerHTML = items.map(item => {
-        const passRate = item.totalSteps > 0 ? Math.round((item.passedSteps || 0) / item.totalSteps * 100) : 0;
-        const statusText = item.status === 'COMPLETED' ? '✓' : item.status === 'FAILED' ? '✗' : '—';
-        const statusColor = item.status === 'COMPLETED' ? '#4caf50' : item.status === 'FAILED' ? '#f44336' : '#666';
-
+        const execId = item.executionPublicId || item.publicId || '';
         return `
-            <tr onclick="window.location.href='execution-detail.html?id=${Utils.escHtml(item.executionPublicId || item.publicId)}'">
+            <tr style="cursor:pointer" data-id="${Utils.escHtml(execId)}">
                 <td>${Utils.escHtml(item.scenarioName || '—')}</td>
-                <td><span style="color: ${statusColor};">${statusText}</span></td>
-                <td>
-                    <div style="width: 80px; height: 6px; background: var(--clr-surface-2); border-radius: 3px; overflow: hidden;">
-                        <div style="width: ${passRate}%; height: 100%; background: ${passRate === 100 ? '#4caf50' : passRate >= 50 ? '#ff9800' : '#f44336'};"></div>
-                    </div>
-                    <span style="font-size: 0.7rem;">${passRate}%</span>
-                </td>
-                <td style="font-size: 0.82rem;">${item.durationMs ? (item.durationMs / 1000).toFixed(2) + 's' : '—'}</td>
-                <td style="font-size: 0.82rem; color: var(--clr-text-muted);">${Utils.escHtml(item.ownerUsername || item.createdBy || item.username || '—')}</td>
-                <td><a href="execution-detail.html?id=${Utils.escHtml(item.executionPublicId || item.publicId)}" class="btn-link" onclick="event.stopPropagation();">Detay</a></td>
-            </tr>
-        `;
+                <td>${statusBadge(item.status)}</td>
+                <td>${Utils.formatDuration(item.durationMs)}</td>
+                <td>${item.totalSteps ?? 0} adım (${item.passedSteps ?? 0} geçti)</td>
+                <td>${Utils.formatDate(item.startedAt)}</td>
+            </tr>`;
     }).join('');
+
+    // Satır tıklama → execution detay
+    tbody.querySelectorAll('tr[data-id]').forEach(row => {
+        row.addEventListener('click', () => {
+            window.location.href = `execution-detail.html?id=${row.dataset.id}`;
+        });
+    });
 }
 
 function renderPagination(data) {
@@ -108,59 +140,111 @@ function renderPagination(data) {
         if (container) container.innerHTML = '';
         return;
     }
-    const html = `
-        <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; align-items: center;">
-            <button ${currentPage === 0 ? 'disabled' : ''} onclick="currentPage--; loadExecutionsReport();" class="btn btn-ghost btn-sm">← Önceki</button>
-            <span style="font-size: 0.85rem; color: var(--clr-text-muted);">Sayfa ${currentPage + 1} / ${data.totalPages}</span>
-            <button ${currentPage >= data.totalPages - 1 ? 'disabled' : ''} onclick="currentPage++; loadExecutionsReport();" class="btn btn-ghost btn-sm">Sonraki →</button>
-        </div>
-    `;
-    container.innerHTML = html;
+    container.innerHTML = `
+        <div style="display:flex;gap:1rem;justify-content:center;margin-top:1rem;align-items:center;">
+            <button ${currentPage === 0 ? 'disabled' : ''}
+                onclick="currentPage--; loadExecutionsReport();"
+                class="btn btn-ghost btn-sm">← Önceki</button>
+            <span style="font-size:.85rem;color:var(--clr-text-muted);">
+                Sayfa ${currentPage + 1} / ${data.totalPages}
+            </span>
+            <button ${currentPage >= data.totalPages - 1 ? 'disabled' : ''}
+                onclick="currentPage++; loadExecutionsReport();"
+                class="btn btn-ghost btn-sm">Sonraki →</button>
+        </div>`;
 }
 
+// ── Yardımcı fonksiyonlar ────────────────────────────────────
+function statusBadge(status) {
+    const map = {
+        COMPLETED: 'badge-success',
+        FAILED:    'badge-danger',
+        CANCELLED: 'badge-neutral',
+        TIMEOUT:   'badge-warning',
+        RUNNING:   'badge-primary',
+        QUEUED:    'badge-neutral',
+        PENDING:   'badge-neutral',
+    };
+    const cls = map[status] ?? 'badge-neutral';
+    const labels = {
+        COMPLETED: 'Tamamlandı',
+        FAILED: 'Başarısız',
+        CANCELLED: 'İptal Edildi',
+        TIMEOUT: 'Zaman Aşımı',
+        RUNNING: 'Çalışıyor',
+        QUEUED: 'Kuyrukta',
+        PENDING: 'Beklemede',
+    };
+    const displayLabel = labels[status] ?? (status || 'Bilinmiyor');
+    return `<span class="badge ${cls}">${displayLabel}</span>`;
+}
+
+// ─── Senaryo Selector ─────────────────────────────────────────
 async function loadScenariosForSelector() {
     try {
-        const response = await Api.get('/scenarios', { page: 0, size: 1000 });
+        // GET /api/v1/scenarios?page=0&size=1000 → ApiResponse<Page<ScenarioResponse>>
+        const raw = await Api.get('/scenarios', { page: 0, size: 1000 });
         let scenarios = [];
-        if (Array.isArray(response)) scenarios = response;
-        else if (response?.content) scenarios = response.content;
-        else if (response?.data?.content) scenarios = response.data.content;
+
+        if (raw?.content) scenarios = raw.content;
+        else if (Array.isArray(raw)) scenarios = raw;
+        else if (raw?.data?.content) scenarios = raw.data.content;
 
         const selector = document.getElementById('select-scenario');
-        const options = scenarios.map(s => `<option value="${Utils.escHtml(s.publicId)}">${Utils.escHtml(s.name)}</option>`).join('');
-        selector.innerHTML = '<option value="">— Seçin —</option>' + options;
+        if (!selector) return;
+
+        const options = scenarios.map(s =>
+            `<option value="${Utils.escHtml(s.publicId)}">${Utils.escHtml(s.name)}</option>`
+        ).join('');
+        selector.innerHTML = '<option value="">— Senaryo Seçin —</option>' + options;
     } catch (err) {
-        Toast.error('Yükleme hatası: ' + err.message);
+        Toast.error('Senaryo listesi yüklenemedi: ' + err.message);
     }
 }
 
+// ─── Senaryo Özeti ─────────────────────────────────────────────
 async function loadScenarioSummary(scenarioId) {
     try {
-        const response = await Api.get(`/reports/scenarios/${scenarioId}/summary`);
-        let summary = response;
-        if (!summary || typeof summary !== 'object') {
-            if (response?.data) summary = response.data;
-        }
+        // GET /api/v1/reports/scenarios/{publicId}/summary → ApiResponse<ScenarioSummaryDto>
+        const raw = await Api.get(`/reports/scenarios/${scenarioId}/summary`);
+        // ScenarioSummaryDto: totalRuns, avgDurationMs, overallPassRate, last10Executions
+        const summary = raw?.totalRuns != null ? raw : (raw?.data ?? raw);
 
-        const passRate = summary.totalExecutions > 0 ? Math.round((summary.passedExecutions || 0) / summary.totalExecutions * 100) : 0;
-        const avgDuration = summary.totalExecutions > 0 ? ((summary.totalDurationMs || 0) / summary.totalExecutions).toFixed(2) : 0;
+        const passRate   = Math.round(summary.overallPassRate ?? 0);
+        const avgDur     = summary.avgDurationMs != null
+            ? (summary.avgDurationMs / 1000).toFixed(2) + 's'
+            : '—';
 
-        document.getElementById('sum-total').textContent = summary.totalExecutions || 0;
-        document.getElementById('sum-avg-duration').textContent = avgDuration + 's';
-        document.getElementById('sum-pass-rate').textContent = passRate + '%';
+        document.getElementById('sum-total').textContent        = summary.totalRuns ?? 0;
+        document.getElementById('sum-avg-duration').textContent = avgDur;
+        document.getElementById('sum-pass-rate').textContent    = passRate + '%';
 
+        // Progress bar
         const bar = document.getElementById('success-bar');
-        bar.style.width = passRate + '%';
-        document.getElementById('progress-text').textContent = passRate + '%';
+        if (bar) {
+            bar.style.width = passRate + '%';
+            bar.style.background = passRate >= 80 ? '#4caf50' : passRate >= 50 ? '#ff9800' : '#f44336';
+        }
+        const progressText = document.getElementById('progress-text');
+        if (progressText) progressText.textContent = passRate + '%';
 
-        // Son 10 kutu
+        // Son 10 execution
         const grid = document.getElementById('last-ten-grid');
-        const executions = summary.lastExecutions || [];
-        grid.innerHTML = executions.slice(0, 10).map(exec => {
-            const status = exec.status === 'COMPLETED' ? 'pass' : 'fail';
-            return `<div class="exec-box ${status}" title="${Utils.escHtml(exec.status)}"></div>`;
-        }).join('');
+        if (grid) {
+            // last10Executions: List<ReportListItemDto>
+            const executions = summary.last10Executions || [];
+            grid.innerHTML = executions.slice(0, 10).map(exec => {
+                const isPass = exec.status === 'COMPLETED';
+                const color  = isPass ? '#4caf50' : '#f44336';
+                return `<div title="${Utils.escHtml(exec.status)}" style="
+                    display:inline-block;width:22px;height:22px;
+                    border-radius:4px;margin:0 3px 4px 0;
+                    background:${color};opacity:.85;cursor:default;
+                    transition:opacity .15s;" onmouseenter="this.style.opacity=1"
+                    onmouseleave="this.style.opacity=.85"></div>`;
+            }).join('');
+        }
     } catch (err) {
-        Toast.error('Yükleme hatası: ' + err.message);
+        Toast.error('Senaryo özeti yüklenemedi: ' + err.message);
     }
 }

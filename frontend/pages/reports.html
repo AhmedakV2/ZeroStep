@@ -25,8 +25,8 @@
 
 <div class="app-shell">
     <aside class="sidebar" id="sidebar"></aside>
+    <header class="topbar" id="topbar"></header>
     <main class="main-content">
-        <header class="topbar" id="topbar"></header>
         <div style="padding: 1.5rem 2rem;">
             <h2 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 1rem; color: var(--clr-text);">Raporlar</h2>
 
@@ -38,8 +38,9 @@
 
             <!-- SEKME 1: ÇALIŞT­IRMA LİSTESİ -->
             <div id="tab-executions" class="tab-panel active">
-                <div class="premium-card" style="margin-top: 1.5rem;">
-                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                <div class="card" style="padding: 1.5rem; margin-top: 1.5rem;">
+                    <h3 style="font-size: 1rem; font-weight: 700; color: var(--clr-text); margin-bottom: 1rem;">Filtreler</h3>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0;">
                         <div style="flex: 1; min-width: 150px;">
                             <label style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); display: block; margin-bottom: 0.3rem;">Senaryo</label>
                             <input type="text" id="filter-scenario" class="form-input" placeholder="Ara..." style="width: 100%;">
@@ -52,13 +53,20 @@
                     </div>
                 </div>
 
-                <div class="premium-card">
-                    <table class="data-table" style="width: 100%;">
-                        <thead><tr><th>Senaryo</th><th>Durum</th><th>Başarı %</th><th>Süre</th><th>Tetikleyen</th><th></th></tr></thead>
-                        <tbody id="executions-tbody">
-                            <tr><td colspan="6" style="padding: 2rem; text-align: center; color: var(--clr-text-muted);">Yükleniyor…</td></tr>
-                        </tbody>
-                    </table>
+                <div class="card" style="padding: 0; overflow: hidden; margin-top: 1.5rem;">
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead><tr><th>Senaryo</th><th>Durum</th><th>Süre</th><th>Adımlar</th><th>Tarih</th></tr></thead>
+                            <tbody id="executions-tbody">
+                                <tr><td colspan="5">
+                                    <div class="empty-state">
+                                        <span class="empty-state-icon">▶</span>
+                                        <p class="empty-state-msg">Yükleniyor…</p>
+                                    </div>
+                                </td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 

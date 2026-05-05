@@ -29,34 +29,32 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class ExecutionRunner {
 
-    private final ExecutionRepository executionRepository;
+    private final ExecutionRepository          executionRepository;
     private final ExecutionStepResultRepository stepResultRepository;
-    private final TestStepRepository stepRepository;
-    private final ExecutionLogService logService;
-    private final WebDriverPool webDriverPool;
-    private final ActionHandlerFactory handlerFactory;
+    private final TestStepRepository            stepRepository;
+    private final ExecutionLogService           logService;
+    private final WebDriverPool                 webDriverPool;
+    private final ActionHandlerFactory          handlerFactory;
     private final com.ahmedv2.zerostep.execution.sse.SseEventBroadcaster sseBroadcaster;
-    private final NotificationService notificationService;
-    private final ExecutionMetrics executionMetrics; // Metrics eklendi
+    private final NotificationService           notificationService;
+    private final ExecutionMetrics              executionMetrics;
 
     private final ConcurrentHashMap<Long, AtomicBoolean> cancelFlags = new ConcurrentHashMap<>();
 
     @Async("taskExecutor")
     public void run(Long executionId) {
-        log.info("Execution baslatiliyor: id={}", executionId);
+        log.info("Execution başlatılıyor: id={}", executionId);
         AtomicBoolean cancelFlag = new AtomicBoolean(false);
         cancelFlags.put(executionId, cancelFlag);
-
         try {
             executeInternal(executionId, cancelFlag);
         } catch (Exception e) {
-            log.error("Execution beklenmedik hata; id={}", executionId, e);
+            log.error("Execution beklenmedik hata: id={}", executionId, e);
             markFailed(executionId, "Beklenmedik hata: " + e.getMessage());
         } finally {
             cancelFlags.remove(executionId);
@@ -70,123 +68,115 @@ public class ExecutionRunner {
         return true;
     }
 
-    // ============================================================
-    // Internal: ana execution dongusu
-    // ============================================================
+    // ── Ana Execution Döngüsü ─────────────────────────────
     private void executeInternal(Long executionId, AtomicBoolean cancelFlag) {
-        Execution execution = startExecution(executionId);
-        if (execution == null) return;
+        // Execution + tüm lazy ilişkileri tek @Transactional içinde yükle
+        ExecutionSnapshot snap = loadExecutionSnapshot(executionId);
+        if (snap == null) return;
 
-        Scenario scenario = execution.getScenario();
-        List<TestStep> steps = stepRepository.findAllByScenarioOrdered(scenario.getId());
+        List<TestStep> steps = stepRepository.findAllByScenarioOrdered(snap.scenarioId());
 
         if (steps.isEmpty()) {
-            logService.warn(execution, null, "Senaryoda hicbir adim yok");
-            finalizeExecution(execution.getId(), ExecutionStatus.COMPLETED, null);
+            logService.warn(snap.execution(), null, "Senaryoda hiçbir adım yok");
+            finalizeExecution(executionId, ExecutionStatus.COMPLETED, null,
+                    snap.recipientUserId(), snap.scenarioName());
             return;
         }
 
-        updateTotalSteps(execution.getId(), steps.size());
-        logService.info(execution, null,
-                "Senaryo basladi: " + scenario.getName() + " (" + steps.size() + " adim)");
+        updateTotalSteps(executionId, steps.size());
+        logService.info(snap.execution(), null,
+                "Senaryo başladı: " + snap.scenarioName() + " (" + steps.size() + " adım)");
 
         WebDriver driver = null;
         ExecutionContext context = null;
         boolean anyFailure = false;
 
         try {
-            // Browseri pool'dan al
-            driver = webDriverPool.acquire(scenario.getBrowserConfig());
-            context = new ExecutionContext(driver, execution, scenario, logService);
-            logService.info(execution, null, "Browser baslatildi");
+            // Browser pool'dan driver al — browserConfig snapshot'tan gelir
+            driver  = webDriverPool.acquire(snap.browserConfig());
+            // ExecutionContext'e execution objesini ver; scenario için snapshot verisini kullan
+            context = new ExecutionContext(driver, snap.execution(), snap.scenario(), logService);
+            logService.info(snap.execution(), null, "Browser başlatıldı");
 
             for (TestStep step : steps) {
                 if (cancelFlag.get()) {
-                    logService.warn(execution, null, "Execution iptal edildi");
-                    finalizeExecution(execution.getId(), ExecutionStatus.CANCELLED,
-                            "Kullanici iptal etti");
+                    logService.warn(snap.execution(), null, "Execution iptal edildi");
+                    finalizeExecution(executionId, ExecutionStatus.CANCELLED,
+                            "Kullanıcı iptal etti",
+                            snap.recipientUserId(), snap.scenarioName());
                     return;
                 }
 
                 if (!step.isEnabled()) {
-                    ExecutionStepResult skipped = createStepResult(execution, step,
+                    ExecutionStepResult skipped = createStepResult(snap.execution(), step,
                             StepResultStatus.SKIPPED);
                     stepResultRepository.save(skipped);
-                    logService.info(execution, skipped,
-                            "Adim atlandi (disabled): " + step.getActionType());
-                    incrementCounters(execution.getId(), 0, 0, 1);
+                    logService.info(snap.execution(), skipped,
+                            "Adım atlandı (disabled): " + step.getActionType());
+                    incrementCounters(executionId, 0, 0, 1);
                     continue;
                 }
 
-                // Step calistir
-                ExecutionStepResult result = createStepResult(execution, step,
+                ExecutionStepResult result = createStepResult(snap.execution(), step,
                         StepResultStatus.RUNNING);
                 ExecutionStepResult savedResult = stepResultRepository.save(result);
                 context.setCurrentStepResult(savedResult);
 
-                logService.info(execution, savedResult,
-                        "Adim basliyor: " + step.getActionType() +
-                                (step.getDescription() != null ? " - " + step.getDescription() : ""));
+                logService.info(snap.execution(), savedResult,
+                        "Adım başlıyor: " + step.getActionType()
+                                + (step.getDescription() != null
+                                ? " — " + step.getDescription() : ""));
 
                 boolean stepPassed = executeStep(step, context, savedResult);
 
                 if (stepPassed) {
-                    incrementCounters(execution.getId(), 1, 0, 0);
+                    incrementCounters(executionId, 1, 0, 0);
                 } else {
                     anyFailure = true;
-                    incrementCounters(execution.getId(), 0, 1, 0);
-
-                    Boolean continueOnFail = step.getConfig() != null
-                            ? step.getConfig().getContinueOnFailure() : null;
-                    if (continueOnFail == null || !continueOnFail) {
-                        logService.error(execution, null,
+                    incrementCounters(executionId, 0, 1, 0);
+                    boolean continueOnFail = step.getConfig() != null
+                            && Boolean.TRUE.equals(step.getConfig().getContinueOnFailure());
+                    if (!continueOnFail) {
+                        logService.error(snap.execution(), null,
                                 "Senaryo durdu: continueOnFailure=false");
-                        finalizeExecution(execution.getId(), ExecutionStatus.FAILED,
-                                "Adim basarisiz: " + step.getActionType());
+                        finalizeExecution(executionId, ExecutionStatus.FAILED,
+                                "Adım başarısız: " + step.getActionType(),
+                                snap.recipientUserId(), snap.scenarioName());
                         return;
                     }
                 }
             }
 
-            ExecutionStatus finalStatus = anyFailure ? ExecutionStatus.FAILED
-                    : ExecutionStatus.COMPLETED;
-            String finalMsg = anyFailure ? "Bazi adimlar basarisiz" : null;
-            finalizeExecution(execution.getId(), finalStatus, finalMsg);
-            logService.info(execution, null, "Senaryo bitti: " + finalStatus.name());
+            ExecutionStatus finalStatus = anyFailure
+                    ? ExecutionStatus.FAILED : ExecutionStatus.COMPLETED;
+            finalizeExecution(executionId, finalStatus,
+                    anyFailure ? "Bazı adımlar başarısız" : null,
+                    snap.recipientUserId(), snap.scenarioName());
+            logService.info(snap.execution(), null, "Senaryo bitti: " + finalStatus.name());
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            logService.error(execution, null, "Driver acquire kesintiye ugradi");
-            finalizeExecution(execution.getId(), ExecutionStatus.FAILED,
-                    "Driver alinamadi: interrupted");
+            logService.error(snap.execution(), null, "Driver acquire kesintiye uğradı");
+            finalizeExecution(executionId, ExecutionStatus.FAILED,
+                    "Driver alınamadı: interrupted",
+                    snap.recipientUserId(), snap.scenarioName());
         } catch (Exception e) {
             log.error("Execution hata; id={}", executionId, e);
-            logService.error(execution, null, "Execution hata: " + e.getMessage());
-            finalizeExecution(execution.getId(), ExecutionStatus.FAILED, e.getMessage());
+            logService.error(snap.execution(), null, "Execution hata: " + e.getMessage());
+            finalizeExecution(executionId, ExecutionStatus.FAILED, e.getMessage(),
+                    snap.recipientUserId(), snap.scenarioName());
         } finally {
-            // Browser'i her durumda iade et
-            if (driver != null) {
-                boolean keepOpen = scenario.getBrowserConfig() != null
-                        && scenario.getBrowserConfig().isKeepBrowserOpen();
-                if (keepOpen) {
-                    logService.info(execution, null,
-                            "keepBrowserOpen=true; browser acik birakildi (DEV)");
-                    // Yine de pool'a iade et; aksi halde slot dolu kalir
-                }
-                webDriverPool.release(driver);
-            }
+            if (driver != null) webDriverPool.release(driver);
         }
     }
 
-    // ============================================================
-    // Step executor: handler'a delege
-    // ============================================================
+    // ── Step Executor ─────────────────────────────────────
     private boolean executeStep(TestStep step, ExecutionContext context,
                                 ExecutionStepResult result) {
         Instant start = Instant.now();
-        Integer retryCount = step.getConfig() != null && step.getConfig().getRetryCount() != null
-                ? step.getConfig().getRetryCount() : 0;
-        int maxAttempts = Math.max(1, retryCount + 1);
+        int maxAttempts = Math.max(1,
+                (step.getConfig() != null && step.getConfig().getRetryCount() != null
+                        ? step.getConfig().getRetryCount() : 0) + 1);
         Exception lastError = null;
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -194,23 +184,19 @@ public class ExecutionRunner {
                 ActionHandler handler = handlerFactory.require(step.getActionType());
                 handler.execute(step, context);
 
-                // Post delay (varsa)
                 Integer postDelay = step.getConfig() != null
                         ? step.getConfig().getPostDelayMs() : null;
-                if (postDelay != null && postDelay > 0) {
-                    Thread.sleep(postDelay);
-                }
+                if (postDelay != null && postDelay > 0) Thread.sleep(postDelay);
 
-                markStepFinished(result.getId(), StepResultStatus.PASSED, null, start,
-                        result.getScreenshotPath());
+                markStepFinished(result.getId(), StepResultStatus.PASSED,
+                        null, start, result.getScreenshotPath());
                 return true;
 
             } catch (UnsupportedOperationException e) {
-                // Handler henuz yok; FAILED ama retry yapma
-                String msg = "Handler bulunamadi: " + step.getActionType().name();
+                String msg = "Handler bulunamadı: " + step.getActionType().name();
                 logService.error(context.getExecution(), result, msg);
-                markStepFinished(result.getId(), StepResultStatus.FAILED, msg, start,
-                        result.getScreenshotPath());
+                markStepFinished(result.getId(), StepResultStatus.FAILED,
+                        msg, start, result.getScreenshotPath());
                 return false;
 
             } catch (InterruptedException e) {
@@ -221,45 +207,66 @@ public class ExecutionRunner {
             } catch (Exception e) {
                 lastError = e;
                 logService.warn(context.getExecution(), result,
-                        "Adim hata (attempt " + attempt + "/" + maxAttempts + "): "
+                        "Adım hata (attempt " + attempt + "/" + maxAttempts + "): "
                                 + e.getMessage());
                 if (attempt < maxAttempts) {
-                    try {
-                        Thread.sleep(500); // Retry oncesi kucuk bekleme
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        break;
+                    try { Thread.sleep(500); } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt(); break;
                     }
                 }
             }
         }
 
-        // Tum denemeler basarisiz
         String errorMsg = lastError != null ? lastError.getMessage() : "Bilinmeyen hata";
-        logService.error(context.getExecution(), result, "Adim basarisiz: " + errorMsg);
-        markStepFinished(result.getId(), StepResultStatus.FAILED, errorMsg, start,
-                result.getScreenshotPath());
+        logService.error(context.getExecution(), result, "Adım başarısız: " + errorMsg);
+        markStepFinished(result.getId(), StepResultStatus.FAILED,
+                errorMsg, start, result.getScreenshotPath());
         return false;
     }
 
-    // ============================================================
-    // DB metodlari (ayri kucuk transaction)
-    // ============================================================
+    // ── DB Metodları ──────────────────────────────────────
 
+    /**
+     * Execution + tüm lazy ilişkilerini tek transaction içinde yükler.
+     * Bu metod dışında lazy proxy'ye erişilmez → "no session" hatası ortadan kalkar.
+     */
     @Transactional
-    protected Execution startExecution(Long executionId) {
-        Execution execution = executionRepository.findById(executionId).orElse(null);
+    protected ExecutionSnapshot loadExecutionSnapshot(Long executionId) {
+        Execution execution = executionRepository
+                .findByIdWithAllRelations(executionId)
+                .orElse(null);
+
         if (execution == null) {
-            log.error("Execution bulunamadi: {}", executionId);
+            log.error("Execution bulunamadı: {}", executionId);
             return null;
         }
-        execution.setStatus(ExecutionStatus.RUNNING);
 
-        // Metrics: Started kaydi eklendi
+        execution.setStatus(ExecutionStatus.RUNNING);
+        execution.setStartedAt(Instant.now());
+        executionRepository.save(execution);
         executionMetrics.recordStarted();
 
-        execution.setStartedAt(Instant.now());
-        return executionRepository.save(execution);
+        // Lazy ilişkilerin değerlerini snapshot'a al —
+        // transaction kapandıktan sonra Scenario/User proxy'sine erişilmez
+        Scenario scenario = execution.getScenario();
+        Long scenarioId       = scenario.getId();
+        String scenarioName   = scenario.getName();
+        String scenarioBaseUrl = scenario.getBaseUrl();
+        var browserConfig     = scenario.getBrowserConfig();
+
+        Long recipientUserId = execution.getTriggeredBy() != null
+                ? execution.getTriggeredBy().getId()
+                : null;
+
+        return new ExecutionSnapshot(
+                execution,
+                scenario,
+                scenarioId,
+                scenarioName,
+                scenarioBaseUrl,
+                browserConfig,
+                recipientUserId
+        );
     }
 
     @Transactional
@@ -271,7 +278,8 @@ public class ExecutionRunner {
     }
 
     @Transactional
-    protected void incrementCounters(Long executionId, int passed, int failed, int skipped) {
+    protected void incrementCounters(Long executionId,
+                                     int passed, int failed, int skipped) {
         executionRepository.findById(executionId).ifPresent(e -> {
             e.setPassedSteps(e.getPassedSteps() + passed);
             e.setFailedSteps(e.getFailedSteps() + failed);
@@ -281,7 +289,9 @@ public class ExecutionRunner {
     }
 
     @Transactional
-    protected void finalizeExecution(Long executionId, ExecutionStatus status, String errorMsg) {
+    protected void finalizeExecution(Long executionId, ExecutionStatus status,
+                                     String errorMsg,
+                                     Long recipientUserId, String scenarioName) {
         executionRepository.findById(executionId).ifPresent(e -> {
             Instant now = Instant.now();
             e.setStatus(status);
@@ -292,31 +302,40 @@ public class ExecutionRunner {
             if (errorMsg != null) e.setErrorMessage(errorMsg);
             executionRepository.save(e);
 
-            // Metrics
-            if (status == ExecutionStatus.COMPLETED) {
-                executionMetrics.recordCompleted();
-            } else if (status == ExecutionStatus.FAILED || status == ExecutionStatus.TIMEOUT) {
-                executionMetrics.recordFailed();
-            }
+            if (status == ExecutionStatus.COMPLETED) executionMetrics.recordCompleted();
+            else if (status == ExecutionStatus.FAILED
+                    || status == ExecutionStatus.TIMEOUT) executionMetrics.recordFailed();
 
-            // Notification
-            if (e.getTriggeredBy() != null && status.isTerminal()) {
+            // Bildirim — lazy proxy kullanmak yerine snapshot'tan gelen ID/name'i kullan
+            if (recipientUserId != null && status.isTerminal()) {
                 notificationService.notifyExecutionFinished(
-                        e.getTriggeredBy().getId(),
-                        e.getScenario().getName(),
+                        recipientUserId,
+                        scenarioName != null ? scenarioName : "Bilinmeyen Senaryo",
                         status.name(),
                         e.getPublicId()
                 );
             }
         });
 
-        // SSE BİTİŞ YAYINI
+        // SSE completion broadcast
         sseBroadcaster.publishCompletion(executionId, status.name());
     }
 
     @Transactional
     protected void markFailed(Long executionId, String errorMsg) {
-        finalizeExecution(executionId, ExecutionStatus.FAILED, errorMsg);
+        // recipientUserId ve scenarioName yok — snapshot yüklenemedi durumu
+        executionRepository.findById(executionId).ifPresent(e -> {
+            Instant now = Instant.now();
+            e.setStatus(ExecutionStatus.FAILED);
+            e.setFinishedAt(now);
+            if (e.getStartedAt() != null) {
+                e.setDurationMs(Duration.between(e.getStartedAt(), now).toMillis());
+            }
+            e.setErrorMessage(errorMsg);
+            executionRepository.save(e);
+            executionMetrics.recordFailed();
+        });
+        sseBroadcaster.publishCompletion(executionId, ExecutionStatus.FAILED.name());
     }
 
     @Transactional
@@ -344,4 +363,15 @@ public class ExecutionRunner {
         sr.setStatus(status);
         return sr;
     }
+
+    // Lazy proxy erişimini transaction içinde sınırlamak için snapshot record
+    record ExecutionSnapshot(
+            Execution execution,
+            Scenario scenario,
+            Long scenarioId,
+            String scenarioName,
+            String scenarioBaseUrl,
+            com.ahmedv2.zerostep.scenario.entity.BrowserConfig browserConfig,
+            Long recipientUserId
+    ) {}
 }

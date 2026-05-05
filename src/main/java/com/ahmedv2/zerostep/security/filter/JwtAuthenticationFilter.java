@@ -101,15 +101,13 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private static final String BEARER_PREFIX = "Bearer ";
-    private static final String HEADER_AUTH = "Authorization";
-
+    private static final String BEARER_PREFIX   = "Bearer ";
+    private static final String HEADER_AUTH     = "Authorization";
     private static final String QUERY_TOKEN_PARAM = "token";
 
     private final JwtTokenProvider jwtTokenProvider;
@@ -120,7 +118,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
-        // EKLENEN KISIM: CORS Preflight (OPTIONS) istekleri token aramaz, doğrudan geçiş ver
+        // OPTIONS preflight — token arama yok, doğrudan geçir
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
@@ -133,16 +131,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String username = jwtTokenProvider.getUsername(token);
                 Set<String> roles = jwtTokenProvider.getRoles(token);
 
-
                 var authorities = roles.stream()
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toSet());
 
-                var authentication = new UsernamePasswordAuthenticationToken(username, null, authorities);
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                var authentication = new UsernamePasswordAuthenticationToken(
+                        username, null, authorities);
+                authentication.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+
             } catch (Exception e) {
-                log.debug("JWT filter auth kurarken hata: {}", e.getMessage());
+                log.debug("JWT filter auth hatası: {}", e.getMessage());
                 SecurityContextHolder.clearContext();
             }
         }
@@ -150,19 +150,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-
     private String resolveToken(HttpServletRequest request) {
+        // 1. Önce Authorization: Bearer <token> header'ına bak
         String bearer = request.getHeader(HEADER_AUTH);
         if (bearer != null && bearer.startsWith(BEARER_PREFIX)) {
             return bearer.substring(BEARER_PREFIX.length()).trim();
         }
 
-        // SSE endpoint'leri header gonderemez; query param'dan token al
-        // Ornek: /api/v1/executions/{publicId}/stream?token=xxx
+        // 2. SSE endpoint için query param — EventSource header gönderemez
+        // /stream ile biten her path için token query param'ından oku
         String uri = request.getRequestURI();
         if (uri != null && uri.endsWith("/stream")) {
-            return request.getParameter(QUERY_TOKEN_PARAM);
+            String queryToken = request.getParameter(QUERY_TOKEN_PARAM);
+            if (queryToken != null && !queryToken.isBlank()) {
+                return queryToken.trim();
+            }
         }
+
         return null;
     }
 }

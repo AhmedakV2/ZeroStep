@@ -15,23 +15,62 @@ import java.util.UUID;
 
 public interface ExecutionRepository extends JpaRepository<Execution, Long> {
 
-    @Query("SELECT e FROM Execution e JOIN FETCH e.scenario sc JOIN FETCH sc.owner " +
-            "WHERE e.publicId = :publicId")
+    /**
+     * Execution + scenario + scenario.owner + triggeredBy ilişkilerini
+     * tek sorguda JOIN FETCH ile yükler.
+     * ExecutionRunner.loadExecutionSnapshot() bunu kullanır;
+     * lazy proxy "no session" hatasını önler.
+     */
+    @Query("""
+        SELECT e FROM Execution e
+        JOIN FETCH e.scenario s
+        JOIN FETCH s.owner
+        LEFT JOIN FETCH e.triggeredBy
+        WHERE e.id = :id
+        """)
+    Optional<Execution> findByIdWithAllRelations(@Param("id") Long id);
+
+    /**
+     * publicId ile execution + scenario + scenario.owner yükler.
+     * ExecutionService ve ExecutionController kullanır.
+     */
+    @Query("""
+        SELECT e FROM Execution e
+        JOIN FETCH e.scenario sc
+        JOIN FETCH sc.owner
+        LEFT JOIN FETCH e.triggeredBy
+        WHERE e.publicId = :publicId
+        """)
     Optional<Execution> findByPublicIdWithScenario(@Param("publicId") UUID publicId);
 
-    @Query("SELECT e FROM Execution e WHERE e.scenario.id = :scenarioId ORDER BY e.queuedAt DESC")
+    @Query("""
+        SELECT e FROM Execution e
+        WHERE e.scenario.id = :scenarioId
+        ORDER BY e.queuedAt DESC
+        """)
     Page<Execution> findByScenarioId(@Param("scenarioId") Long scenarioId, Pageable pageable);
 
-    @Query("SELECT COUNT(e) FROM Execution e WHERE e.triggeredBy.id = :userId " +
-            "AND e.status IN (com.ahmedv2.zerostep.execution.entity.ExecutionStatus.QUEUED, " +
-            "                  com.ahmedv2.zerostep.execution.entity.ExecutionStatus.RUNNING)")
+    @Query("""
+        SELECT COUNT(e) FROM Execution e
+        WHERE e.triggeredBy.id = :userId
+          AND e.status IN (
+              com.ahmedv2.zerostep.execution.entity.ExecutionStatus.QUEUED,
+              com.ahmedv2.zerostep.execution.entity.ExecutionStatus.RUNNING
+          )
+        """)
     long countActiveByUser(@Param("userId") Long userId);
 
-    @Query("SELECT e FROM Execution e WHERE e.status = :status ORDER BY e.queuedAt ASC")
+    @Query("""
+        SELECT e FROM Execution e
+        WHERE e.status = :status
+        ORDER BY e.queuedAt ASC
+        """)
     List<Execution> findByStatus(@Param("status") ExecutionStatus status);
 
-    // KESİN ÇÖZÜM: Null kontrolünü Java'ya (statusIsNull) bıraktık.
-    // ORDER BY kaldırıldı, sıralamayı Frontend (sort=startedAt,desc) yapacak.
+    /**
+     * Rapor listesi — filtre parametrelerinin NULL güvenli hali.
+     * statusIsNull=true ise status filtresi uygulanmaz.
+     */
     @Query("""
         SELECT e FROM Execution e
         JOIN e.scenario s
