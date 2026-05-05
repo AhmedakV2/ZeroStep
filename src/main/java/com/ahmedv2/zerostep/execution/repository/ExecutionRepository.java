@@ -38,19 +38,19 @@ public interface ExecutionRepository extends JpaRepository<Execution, Long> {
         SELECT e FROM Execution e
         JOIN e.scenario s
         JOIN s.owner o
-        WHERE (:scenarioId IS NULL OR s.publicId = :scenarioId)
-          AND (:status     IS NULL OR e.status = :status)
-          AND (:username   = ''    OR o.username = :username)
-          AND (:fromDate   IS NULL OR e.startedAt >= :fromDate)
-          AND (:toDate     IS NULL OR e.startedAt <= :toDate)
+        WHERE (:scenarioName   = ''    OR LOWER(s.name) LIKE LOWER(CONCAT('%', :scenarioName, '%')))
+          AND (:status         IS NULL OR e.status = :status)
+          AND (:username       = ''    OR o.username = :username)
+          AND (:fromDate       IS NULL OR e.startedAt >= :fromDate)
+          AND (:toDate         IS NULL OR e.startedAt <= :toDate)
         ORDER BY e.startedAt DESC
         """)
     Page<Execution> findAllFiltered(
-            @Param("scenarioId") UUID scenarioId,
-            @Param("status")     ExecutionStatus status,
-            @Param("username")   String username,
-            @Param("fromDate")   Instant fromDate,
-            @Param("toDate")     Instant toDate,
+            @Param("scenarioName") String scenarioName,
+            @Param("status")       ExecutionStatus status,
+            @Param("username")     String username,
+            @Param("fromDate")     Instant fromDate,
+            @Param("toDate")       Instant toDate,
             Pageable pageable
     );
 

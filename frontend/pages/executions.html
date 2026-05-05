@@ -10,96 +10,85 @@
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/layout.css">
     <style>
-        /* Durum badge spinner animasyonu */
-        .badge-spinning {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-        }
-        .badge-spinning .mini-spinner {
-            width: 0.7rem;
-            height: 0.7rem;
-            border: 1.5px solid rgba(255,255,255,.3);
-            border-top-color: currentColor;
-            border-radius: 50%;
-            animation: spin .65s linear infinite;
-            flex-shrink: 0;
-        }
-        /* Satır hover pointer */
-        .data-table tbody tr.clickable-row { cursor: pointer; }
+        .badge-status { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.7rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 600; }
+        .badge-queued { background: rgba(255,193,7,.15); color: #ffc107; }
+        .badge-running { background: rgba(33,150,243,.15); color: #2196f3; }
+        .badge-completed { background: rgba(76,175,80,.15); color: #4caf50; }
+        .badge-failed { background: rgba(244,67,54,.15); color: #f44336; }
+        .badge-cancelled { background: rgba(158,158,158,.15); color: #9e9e9e; }
+        .badge-timeout { background: rgba(255,152,0,.15); color: #ff9800; }
+        .mini-spinner { display: inline-block; width: 0.6rem; height: 0.6rem; border: 1.5px solid rgba(255,255,255,.3); border-top-color: currentColor; border-radius: 50%; animation: spin 0.65s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 <div id="toast-container"></div>
 
-<div class="app-shell" id="app-shell">
+<div class="app-shell">
     <aside class="sidebar" id="sidebar"></aside>
-    <header class="topbar" id="topbar"></header>
-
     <main class="main-content">
-        <div class="page-header">
-            <div class="page-header-left">
-                <h2 class="page-title">Çalıştırmalar</h2>
-                <p class="page-subtitle">Senaryo çalıştırma geçmişi</p>
+        <header class="topbar" id="topbar"></header>
+        <div style="padding: 1.5rem 2rem;">
+            <h2 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 1rem; color: var(--clr-text);">Çalıştırmalar</h2>
+
+            <div class="premium-card" style="margin-bottom: 1.5rem;">
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+                    <div style="flex: 1; min-width: 160px;">
+                        <label style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); margin-bottom: 0.3rem; display: block;">Senaryo Adı</label>
+                        <input type="text" id="filter-scenario" class="form-input" placeholder="Ara..." style="width: 100%;">
+                    </div>
+                    <div style="flex: 1; min-width: 140px;">
+                        <label style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); margin-bottom: 0.3rem; display: block;">Durum</label>
+                        <select id="filter-status" class="form-input" style="width: 100%;">
+                            <option value="">Tümü</option>
+                            <option value="QUEUED">Kuyrukta</option>
+                            <option value="RUNNING">Çalışıyor</option>
+                            <option value="COMPLETED">Tamamlandı</option>
+                            <option value="FAILED">Başarısız</option>
+                            <option value="CANCELLED">İptal</option>
+                            <option value="TIMEOUT">Zaman Aşımı</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 160px;">
+                        <label style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); margin-bottom: 0.3rem; display: block;">Başlangıç</label>
+                        <input type="datetime-local" id="filter-from" class="form-input" style="width: 100%;">
+                    </div>
+                    <div style="flex: 1; min-width: 160px;">
+                        <label style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); margin-bottom: 0.3rem; display: block;">Bitiş</label>
+                        <input type="datetime-local" id="filter-to" class="form-input" style="width: 100%;">
+                    </div>
+                    <button id="btn-filter" class="btn btn-primary btn-sm" style="align-self: flex-end;">Filtrele</button>
+                </div>
             </div>
-        </div>
 
-        <!-- Filtre Barı -->
-        <div class="filter-bar" style="flex-wrap:wrap; gap:.75rem; margin-bottom:1.25rem;">
-            <input type="text" class="form-input" id="filter-search"
-                   placeholder="Senaryo adı ara..." style="max-width:220px;">
-
-            <select class="form-input" id="filter-status" style="max-width:160px;">
-                <option value="">Tüm Durumlar</option>
-                <option value="QUEUED">Kuyrukta</option>
-                <option value="RUNNING">Çalışıyor</option>
-                <option value="COMPLETED">Tamamlandı</option>
-                <option value="FAILED">Başarısız</option>
-                <option value="CANCELLED">İptal</option>
-                <option value="TIMEOUT">Zaman Aşımı</option>
-            </select>
-
-            <input type="datetime-local" class="form-input" id="filter-from"
-                   style="max-width:190px;" title="Başlangıç tarihi">
-            <input type="datetime-local" class="form-input" id="filter-to"
-                   style="max-width:190px;" title="Bitiş tarihi">
-
-            <button class="btn btn-ghost btn-sm" id="btn-clear-filters">Temizle</button>
-        </div>
-
-        <!-- Tablo -->
-        <div class="card" style="padding:0;">
-            <div class="table-wrapper" style="border:none;">
-                <table class="data-table" id="executions-table">
+            <div class="premium-card">
+                <table class="data-table" style="width: 100%;">
                     <thead>
-                    <tr>
-                        <th>Senaryo</th>
-                        <th>Durum</th>
-                        <th>Tetikleyen</th>
-                        <th>Kuyruk Zamanı</th>
-                        <th>Süre</th>
-                        <th>Adımlar</th>
-                        <th style="width:60px;"></th>
-                    </tr>
+                        <tr>
+                            <th>Senaryo</th>
+                            <th>Durum</th>
+                            <th>Tetikleyen</th>
+                            <th>Kuyruk Zamanı</th>
+                            <th>Süre</th>
+                            <th>Adım Sonuçları</th>
+                            <th></th>
+                        </tr>
                     </thead>
-                    <tbody id="executions-body">
-                    <tr>
-                        <td colspan="7">
-                            <div class="empty-state">
-                                <span class="empty-state-msg">Yükleniyor…</span>
-                            </div>
-                        </td>
-                    </tr>
+                    <tbody id="executions-tbody">
+                        <tr>
+                            <td colspan="7" style="padding: 2rem; text-align: center; color: var(--clr-text-muted);">
+                                <span class="mini-spinner"></span> Yükleniyor…
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
-        </div>
 
-        <div class="pagination-wrapper" id="pagination"></div>
+            <div id="pagination-container"></div>
+        </div>
     </main>
 </div>
 
-<!-- Scripts -->
 <script src="../assets/js/utils.js"></script>
 <script src="../assets/js/store.js"></script>
 <script src="../assets/js/toast.js"></script>
@@ -108,7 +97,6 @@
 <script src="../assets/js/router.js"></script>
 <script src="../js/components/sidebar.js"></script>
 <script src="../js/components/topbar.js"></script>
-<script src="../js/components/pagination.js"></script>
 <script src="../js/pages/executions.js"></script>
 </body>
 </html>

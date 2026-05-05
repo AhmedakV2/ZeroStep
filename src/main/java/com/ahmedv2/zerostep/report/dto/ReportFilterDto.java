@@ -6,7 +6,7 @@ import java.time.Instant;
 
 // Rapor liste filtre parametreleri (query params olarak gelir)
 public record ReportFilterDto(
-        String scenarioPublicId,
+        String scenarioName,
         String status,
         String username,
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)

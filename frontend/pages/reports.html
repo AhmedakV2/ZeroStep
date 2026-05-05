@@ -1,10 +1,125 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroStep — Raporlar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/layout.css">
+    <style>
+        .tab-btn { background: none; border: none; padding: 1rem; cursor: pointer; color: var(--clr-text-muted); border-bottom: 2px solid transparent; transition: all 0.2s; font-weight: 600; }
+        .tab-btn.active { color: var(--clr-primary); border-bottom-color: var(--clr-primary); }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        .progress-bar { display: inline-block; height: 8px; background: #4caf50; border-radius: 4px; }
+        .exec-box { display: inline-block; width: 24px; height: 24px; margin: 0 4px 4px 0; border-radius: 4px; cursor: pointer; }
+        .exec-box.pass { background: #4caf50; }
+        .exec-box.fail { background: #f44336; }
+    </style>
 </head>
 <body>
+<div id="toast-container"></div>
 
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content">
+        <header class="topbar" id="topbar"></header>
+        <div style="padding: 1.5rem 2rem;">
+            <h2 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 1rem; color: var(--clr-text);">Raporlar</h2>
+
+            <!-- Sekmeler -->
+            <div class="premium-card" style="border-radius: 0; margin-bottom: 0; display: flex; border-bottom: 1px solid var(--clr-border);">
+                <button class="tab-btn active" onclick="switchTab('executions', event)">Çalıştırma Listesi</button>
+                <button class="tab-btn" onclick="switchTab('scenarios', event)">Senaryo Özeti</button>
+            </div>
+
+            <!-- SEKME 1: ÇALIŞT­IRMA LİSTESİ -->
+            <div id="tab-executions" class="tab-panel active">
+                <div class="premium-card" style="margin-top: 1.5rem;">
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <div style="flex: 1; min-width: 150px;">
+                            <label style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); display: block; margin-bottom: 0.3rem;">Senaryo</label>
+                            <input type="text" id="filter-scenario" class="form-input" placeholder="Ara..." style="width: 100%;">
+                        </div>
+                        <div style="flex: 1; min-width: 140px;">
+                            <label style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); display: block; margin-bottom: 0.3rem;">Durum</label>
+                            <select id="filter-status" class="form-input" style="width: 100%;"><option value="">Tümü</option><option value="COMPLETED">Tamamlandı</option><option value="FAILED">Başarısız</option></select>
+                        </div>
+                        <button id="btn-filter" class="btn btn-primary btn-sm" style="align-self: flex-end;">Filtrele</button>
+                    </div>
+                </div>
+
+                <div class="premium-card">
+                    <table class="data-table" style="width: 100%;">
+                        <thead><tr><th>Senaryo</th><th>Durum</th><th>Başarı %</th><th>Süre</th><th>Tetikleyen</th><th></th></tr></thead>
+                        <tbody id="executions-tbody">
+                            <tr><td colspan="6" style="padding: 2rem; text-align: center; color: var(--clr-text-muted);">Yükleniyor…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SEKME 2: SENARYO ÖZETİ -->
+            <div id="tab-scenarios" class="tab-panel">
+                <div class="premium-card" style="margin-top: 1.5rem;">
+                    <label style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); display: block; margin-bottom: 0.5rem;">Senaryo Seç</label>
+                    <select id="select-scenario" class="form-input">
+                        <option value="">— Seçin —</option>
+                    </select>
+                </div>
+
+                <div id="scenario-summary" style="display: none;">
+                    <div class="premium-card" style="margin-top: 1.5rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted);">Toplam Çalıştırma</div>
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--clr-primary);" id="sum-total">0</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted);">Ortalama Süre</div>
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--clr-primary);" id="sum-avg-duration">—</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted);">Başarı Oranı</div>
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--clr-primary);" id="sum-pass-rate">—</div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1.5rem;">
+                            <div style="font-size: 0.75rem; font-weight: 600; color: var(--clr-text-muted); margin-bottom: 0.5rem;">Başarı %</div>
+                            <div style="width: 100%; height: 24px; background: var(--clr-surface-2); border-radius: 4px; overflow: hidden;">
+                                <div class="progress-bar" id="success-bar" style="width: 0%; height: 100%;">
+                                    <span style="color: white; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; height: 100%; padding: 0 0.5rem;" id="progress-text">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="premium-card" style="margin-top: 1.5rem;">
+                        <h3 style="margin-bottom: 1rem; font-size: 0.95rem; color: var(--clr-text);">Son 10 Çalıştırma</h3>
+                        <div id="last-ten-grid" style="display: flex; flex-wrap: wrap;"></div>
+                    </div>
+                </div>
+
+                <div id="scenario-empty" style="text-align: center; padding: 3rem; color: var(--clr-text-muted);">
+                    Senaryo seçerek özet bilgileri görebilirsiniz
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="../assets/js/utils.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/toast.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/router.js"></script>
+<script src="../js/components/sidebar.js"></script>
+<script src="../js/components/topbar.js"></script>
+<script src="../js/pages/reports.js"></script>
 </body>
 </html>

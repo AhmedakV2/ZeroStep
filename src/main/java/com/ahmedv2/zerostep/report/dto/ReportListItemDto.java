@@ -9,6 +9,7 @@ public record ReportListItemDto(
         String scenarioName,
         String status,
         String triggerType,
+        String ownerUsername,
         Instant startedAt,
         Instant finishedAt,
         Long durationMs,

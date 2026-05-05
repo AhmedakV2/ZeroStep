@@ -61,10 +61,7 @@ public class ReportService {
 
     public Page<ReportListItemDto> listReports(ReportFilterDto filter, Pageable pageable) {
         // Parametre çözümlemeleri method çağrısının dışında yapılıyor
-        UUID scenarioId = null;
-        if (filter.scenarioPublicId() != null && !filter.scenarioPublicId().isBlank()) {
-            scenarioId = UUID.fromString(filter.scenarioPublicId());
-        }
+        String scenarioName = filter.scenarioName() != null ? filter.scenarioName().trim() : "";
 
         ExecutionStatus executionStatus = null;
         if (filter.status() != null && !filter.status().isBlank()) {
@@ -74,7 +71,7 @@ public class ReportService {
         String username = filter.username() != null ? filter.username() : "";
 
         return executionRepo.findAllFiltered(
-                scenarioId,
+                scenarioName,
                 executionStatus,
                 username,
                 filter.fromDate(),
@@ -169,6 +166,7 @@ public class ReportService {
                 e.getScenario().getName(),
                 e.getStatus().name(),
                 e.getTriggerType().name(),
+                e.getScenario().getOwner().getUsername(),
                 e.getStartedAt(),
                 e.getFinishedAt(),
                 e.getDurationMs(),
