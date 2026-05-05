@@ -12,6 +12,10 @@ spring:
       max-lifetime: 600000
       pool-name: ZeroStepHikariPool
 
+app:
+  execution:
+    headless: true   # Önce bunu true yap, test et
+
   jpa:
     show-sql: true
     properties:

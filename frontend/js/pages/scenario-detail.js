@@ -1097,18 +1097,33 @@
     // ═══════════════════════════════════════════════════════════
 
     async function runScenario() {
-        if (!steps.filter(s=>s.enabled).length) {
-            Toast.warning('Çalıştırılacak aktif adım yok.'); return;
+        if (!steps.filter(s => s.enabled).length) {
+            Toast.warning('Çalıştırılacak aktif adım yok.');
+            return;
         }
+
         const btn = document.getElementById('btn-run');
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Çalışıyor...';
+
         try {
-            const exec = await Api.post(`/scenarios/${scenarioPublicId}/execute`, {});
+            // ENDPOINT DÜZELTİLDİ: Backend'deki @RequestMapping("/api/v1") ile uyumlu hale getirildi
+            // ApiResponse wrapper yapısına uygun şekilde veri alındı
+            const response = await Api.post(`/scenarios/${scenarioPublicId}/execute`, {});
+
+            // Backend ApiResponse.ok(response) döndüğü için dataya erişim:
+            const exec = response.data ? response.data : response;
+
             Toast.success('Senaryo kuyruğa alındı!');
-            setTimeout(() => window.location.href = `execution-detail.html?id=${exec.publicId}`, 900);
+
+            // Yönlendirme adresi düzeltildi
+            setTimeout(() => {
+                window.location.href = `execution-detail.html?id=${exec.publicId}`;
+            }, 800);
+
         } catch (err) {
-            Toast.error('Çalıştırılamadı: ' + err.message);
+            console.error("Run Error:", err);
+            Toast.error('Çalıştırılamadı: ' + (err.message || 'Sunucu hatası'));
             btn.disabled = scenarioData?.status !== 'READY';
             btn.innerHTML = '&#9654; Çalıştır';
         }

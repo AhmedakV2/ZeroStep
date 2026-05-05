@@ -292,14 +292,14 @@ public class ExecutionRunner {
             if (errorMsg != null) e.setErrorMessage(errorMsg);
             executionRepository.save(e);
 
-            // Metrics: status durumuna gore tamamlanma veya hata/zaman asimi kaydi eklendi
+            // Metrics
             if (status == ExecutionStatus.COMPLETED) {
                 executionMetrics.recordCompleted();
             } else if (status == ExecutionStatus.FAILED || status == ExecutionStatus.TIMEOUT) {
                 executionMetrics.recordFailed();
             }
 
-            // Execution sahibine bildirim gonder
+            // Notification
             if (e.getTriggeredBy() != null && status.isTerminal()) {
                 notificationService.notifyExecutionFinished(
                         e.getTriggeredBy().getId(),
@@ -310,9 +310,8 @@ public class ExecutionRunner {
             }
         });
 
-        if (status.isTerminal()) {
-            sseBroadcaster.publishCompletion(executionId, status.name());
-        }
+        // SSE BİTİŞ YAYINI
+        sseBroadcaster.publishCompletion(executionId, status.name());
     }
 
     @Transactional
