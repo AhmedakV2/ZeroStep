@@ -33,7 +33,7 @@ public interface ExecutionRepository extends JpaRepository<Execution, Long> {
     @Query("SELECT e FROM Execution e WHERE e.status = :status ORDER BY e.queuedAt ASC")
     List<Execution> findByStatus(@Param("status") ExecutionStatus status);
 
-    // Filtreleme + pagination için JPQL sorgusu
+    // Filtreleme + pagination için JPQL sorgusu (Tip belirsizliği CAST ile çözüldü)
     @Query("""
         SELECT e FROM Execution e
         JOIN e.scenario s
@@ -41,8 +41,8 @@ public interface ExecutionRepository extends JpaRepository<Execution, Long> {
         WHERE (:scenarioName   = ''    OR LOWER(s.name) LIKE LOWER(CONCAT('%', :scenarioName, '%')))
           AND (:status         IS NULL OR e.status = :status)
           AND (:username       = ''    OR o.username = :username)
-          AND (:fromDate       IS NULL OR e.startedAt >= :fromDate)
-          AND (:toDate         IS NULL OR e.startedAt <= :toDate)
+          AND (CAST(:fromDate AS timestamp) IS NULL OR e.startedAt >= :fromDate)
+          AND (CAST(:toDate AS timestamp) IS NULL OR e.startedAt <= :toDate)
         ORDER BY e.startedAt DESC
         """)
     Page<Execution> findAllFiltered(
