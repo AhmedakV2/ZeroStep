@@ -19,42 +19,39 @@ public interface ExecutionRepository extends JpaRepository<Execution, Long> {
             "WHERE e.publicId = :publicId")
     Optional<Execution> findByPublicIdWithScenario(@Param("publicId") UUID publicId);
 
-    // Senaryo bazli execution gecmisi
     @Query("SELECT e FROM Execution e WHERE e.scenario.id = :scenarioId ORDER BY e.queuedAt DESC")
     Page<Execution> findByScenarioId(@Param("scenarioId") Long scenarioId, Pageable pageable);
 
-    // Kullanicinin aktif (calisiyor veya kuyrukta) execution sayisi; concurrent limit icin
     @Query("SELECT COUNT(e) FROM Execution e WHERE e.triggeredBy.id = :userId " +
             "AND e.status IN (com.ahmedv2.zerostep.execution.entity.ExecutionStatus.QUEUED, " +
             "                  com.ahmedv2.zerostep.execution.entity.ExecutionStatus.RUNNING)")
     long countActiveByUser(@Param("userId") Long userId);
 
-    // Sistem geneli aktif execution'lar; pool kapasitesi kontrolu
     @Query("SELECT e FROM Execution e WHERE e.status = :status ORDER BY e.queuedAt ASC")
     List<Execution> findByStatus(@Param("status") ExecutionStatus status);
 
-    // Filtreleme + pagination için JPQL sorgusu (Tip belirsizliği CAST ile çözüldü)
+    // KESİN ÇÖZÜM: Null kontrolünü Java'ya (statusIsNull) bıraktık.
+    // ORDER BY kaldırıldı, sıralamayı Frontend (sort=startedAt,desc) yapacak.
     @Query("""
         SELECT e FROM Execution e
         JOIN e.scenario s
         JOIN s.owner o
-        WHERE (:scenarioName   = ''    OR LOWER(s.name) LIKE LOWER(CONCAT('%', :scenarioName, '%')))
-          AND (:status         IS NULL OR e.status = :status)
-          AND (:username       = ''    OR o.username = :username)
-          AND (CAST(:fromDate AS timestamp) IS NULL OR e.startedAt >= :fromDate)
-          AND (CAST(:toDate AS timestamp) IS NULL OR e.startedAt <= :toDate)
-        ORDER BY e.startedAt DESC
+        WHERE (:scenarioName = '' OR LOWER(s.name) LIKE LOWER(CONCAT('%', :scenarioName, '%')))
+          AND (:statusIsNull = true OR e.status = :status)
+          AND (:username = '' OR o.username = :username)
+          AND (e.startedAt >= :fromDate)
+          AND (e.startedAt <= :toDate)
         """)
     Page<Execution> findAllFiltered(
             @Param("scenarioName") String scenarioName,
             @Param("status")       ExecutionStatus status,
+            @Param("statusIsNull") boolean statusIsNull,
             @Param("username")     String username,
             @Param("fromDate")     Instant fromDate,
             @Param("toDate")       Instant toDate,
             Pageable pageable
     );
 
-    // Senaryo özeti için son N execution
     @Query("""
         SELECT e FROM Execution e
         WHERE e.scenario.publicId = :scenarioPublicId
@@ -66,7 +63,6 @@ public interface ExecutionRepository extends JpaRepository<Execution, Long> {
             Pageable pageable
     );
 
-    // Toplam çalışma sayısı ve ortalama süre için
     @Query("""
         SELECT COUNT(e), COALESCE(AVG(e.durationMs), 0)
         FROM Execution e

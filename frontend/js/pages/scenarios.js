@@ -3,19 +3,20 @@ const pageSize = 20;
 
 // ═══════════════════════════════════════════════════════════ INITIALIZATION
 async function init() {
-    // Auth guard
     if (!Auth.isLoggedIn()) { window.location.href = '../index.html'; return; }
 
-    // Layout bileşenlerini render et
-    Sidebar.render('sidebar-container');
-    Topbar.render('topbar-container', 'Senaryo Yönetimi');
+    try {
+        Sidebar.render('sidebar-container');
+        Topbar.render('topbar-container', 'Senaryo Yönetimi');
+    } catch (e) {
+        console.warn("UI render hatası:", e);
+    }
 
     setupEventListeners();
     checkPermissions();
     await loadScenarios();
 }
 
-// DOM hazır olduğunda init çalıştır
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
@@ -34,7 +35,7 @@ function setupEventListeners() {
     const statusFilter = document.getElementById('filter-status');
     const newBtn = document.getElementById('btn-new-scenario');
 
-    if (searchInput) {
+    if (searchInput && typeof Utils.debounce === 'function') {
         searchInput.addEventListener('input', Utils.debounce(() => {
             currentPage = 0;
             loadScenarios();
@@ -52,7 +53,6 @@ function setupEventListeners() {
         newBtn.addEventListener('click', () => openScenarioEditModal());
     }
 
-    // Dropdown kapatma (sayfa düzeyinde)
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.dropdown-container')) {
             document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
@@ -64,9 +64,15 @@ function setupEventListeners() {
 async function loadScenarios() {
     const search = document.getElementById('filter-search')?.value || '';
     const status = document.getElementById('filter-status')?.value || '';
+    const tbody = document.getElementById('scenarios-list');
+
+    // Yükleniyor durumu
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center p-8"><span class="mini-spinner" style="margin-right: 8px;"></span> Senaryolar yükleniyor...</td></tr>`;
+    }
 
     try {
-        const data = await Api.get('/scenarios', {
+        const response = await Api.get('/scenarios', {
             search,
             status,
             page: currentPage,
@@ -74,13 +80,27 @@ async function loadScenarios() {
             sort: 'createdAt,desc'
         });
 
-        renderTable(data.content);
-        Pagination.render(document.getElementById('pagination-container'), data, (newPage) => {
-            currentPage = newPage;
-            loadScenarios();
-        });
+        // ApiResponse sarmalayıcısını (wrapper) GÜVENLİ AÇMA İŞLEMİ
+        const data = (response && response.data && response.data.content !== undefined)
+            ? response.data
+            : (response || {});
+
+        const items = data.content || (Array.isArray(data) ? data : []);
+
+        renderTable(items);
+
+        const paginationContainer = document.getElementById('pagination-container');
+        if (paginationContainer && typeof Pagination !== 'undefined' && Pagination.render) {
+            Pagination.render(paginationContainer, data, (newPage) => {
+                currentPage = newPage;
+                loadScenarios();
+            });
+        }
     } catch (err) {
-        Toast.error("Senaryolar yüklenemedi: " + (err.message || "Bilinmeyen hata"));
+        if (typeof Toast !== 'undefined') Toast.error("Senaryolar yüklenemedi: " + (err.message || "Bilinmeyen hata"));
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-danger">Veriler yüklenemedi.</td></tr>`;
+        }
     }
 }
 
@@ -88,31 +108,33 @@ function renderTable(scenarios) {
     const tbody = document.getElementById('scenarios-list');
     if (!tbody) return;
 
-    if (scenarios.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center p-8">Senaryo bulunamadı.</td></tr>`;
+    if (!scenarios || scenarios.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center p-8" style="color: var(--clr-text-muted);">Senaryo bulunamadı.</td></tr>`;
         return;
     }
 
     tbody.innerHTML = scenarios.map(s => {
         const canEdit = !Auth.hasRole('VIEWER') || Auth.hasRole('ADMIN') || Auth.hasRole('TESTER');
+        const status = s.status || 'DRAFT';
+
         return `
             <tr>
                 <td>
                     <div class="text-bold">${Utils.escHtml(s.name)}</div>
                     <div class="text-muted small">${Utils.escHtml(s.baseUrl || 'URL Tanımlanmamış')}</div>
                 </td>
-                <td><span class="badge badge-${s.status.toLowerCase()}">${s.status}</span></td>
-                <td>${Utils.escHtml(s.ownerUsername)}</td>
-                <td>${Utils.formatDate(s.createdAt)}</td>
+                <td><span class="badge badge-${status.toLowerCase()}">${Utils.escHtml(status)}</span></td>
+                <td>${Utils.escHtml(s.ownerUsername || 'Bilinmiyor')}</td>
+                <td>${s.createdAt ? Utils.formatDate(s.createdAt) : '—'}</td>
                 <td class="text-right actions-cell">
-                    <button class="btn btn-icon" onclick="window.openScenarioDetail('${s.publicId}')" title="Detay">👁</button>
+                    <button class="btn btn-icon" onclick="window.openScenarioDetail('${Utils.escHtml(s.publicId)}')" title="Detay">👁</button>
                     ${canEdit ? `
                         <div class="dropdown-container" style="position:relative;display:inline-block">
                             <button class="btn btn-icon" onclick="window.toggleActionsMenu(this)" title="Daha Fazla">⋯</button>
                             <div class="dropdown-menu" style="display:none">
-                                <button onclick="window.editScenario('${s.publicId}')">Düzenle</button>
-                                <button onclick="window.changeScenarioStatus('${s.publicId}')">Durumu Değiştir</button>
-                                <button class="text-danger" onclick="window.deleteScenario('${s.publicId}')">Sil</button>
+                                <button onclick="window.editScenario('${Utils.escHtml(s.publicId)}')">Düzenle</button>
+                                <button onclick="window.changeScenarioStatus('${Utils.escHtml(s.publicId)}')">Durumu Değiştir</button>
+                                <button class="text-danger" onclick="window.deleteScenario('${Utils.escHtml(s.publicId)}')">Sil</button>
                             </div>
                         </div>
                     ` : ''}
@@ -127,7 +149,7 @@ window.toggleActionsMenu = (btn) => {
     const menu = btn.nextElementSibling;
     const isOpen = menu.style.display === 'flex' || menu.style.display === 'grid';
     document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
-    if (!isOpen) menu.style.display = 'flex';
+    if (!isOpen && menu) menu.style.display = 'flex';
 };
 
 // ═══════════════════════════════════════════════════════════ DETAIL
@@ -138,7 +160,9 @@ window.openScenarioDetail = (publicId) => {
 // ═══════════════════════════════════════════════════════════ EDIT/CREATE
 window.editScenario = async (publicId) => {
     try {
-        const scenario = await Api.get(`/scenarios/${publicId}`);
+        const response = await Api.get(`/scenarios/${publicId}`);
+        // Backend'den gelen cevabı güvenli aç
+        const scenario = response.data ? response.data : response;
         openScenarioEditModal(scenario);
     } catch (err) {
         Toast.error("Senaryo detayları alınamadı.");
@@ -157,15 +181,25 @@ function openScenarioEditModal(scenario = null) {
                     required minlength="3" maxlength="255">
             </div>
 
-            <div class="form-group mb-4">
-                <label class="form-label">Açıklama</label>
-                <textarea name="description" class="form-input" rows="2" maxlength="500">${Utils.escHtml(scenario?.description || '')}</textarea>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                <div class="form-group">
+                    <label class="form-label">Durum</label>
+                    <select name="status" class="form-input">
+                        <option value="DRAFT" ${scenario?.status === 'DRAFT' ? 'selected' : ''}>Taslak (DRAFT)</option>
+                        <option value="READY" ${scenario?.status === 'READY' || !scenario ? 'selected' : ''}>Hazır (READY)</option>
+                        <option value="ARCHIVED" ${scenario?.status === 'ARCHIVED' ? 'selected' : ''}>Arşivli (ARCHIVED)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Base URL</label>
+                    <input type="url" name="baseUrl" class="form-input" value="${Utils.escHtml(scenario?.baseUrl || '')}" 
+                        placeholder="https://example.com">
+                </div>
             </div>
 
             <div class="form-group mb-4">
-                <label class="form-label">Base URL</label>
-                <input type="url" name="baseUrl" class="form-input" value="${Utils.escHtml(scenario?.baseUrl || '')}" 
-                    placeholder="https://example.com">
+                <label class="form-label">Açıklama</label>
+                <textarea name="description" class="form-input" rows="2" maxlength="500">${Utils.escHtml(scenario?.description || '')}</textarea>
             </div>
 
             <div class="form-group mb-4">
@@ -206,7 +240,7 @@ function openScenarioEditModal(scenario = null) {
     `;
 
     Modal.open({
-        title: isEdit ? 'Senaryoyu Düzenle' : 'Yeni Senaryo',
+        title: isEdit ? 'Senaryoyu Düzenle' : 'Yeni Senaryo Oluştur',
         contentHTML: content,
         confirmLabel: 'Kaydet',
         size: 'md',
@@ -215,7 +249,6 @@ function openScenarioEditModal(scenario = null) {
         }
     });
 
-    // Tag input'u setup et
     setupTagInput();
 }
 
@@ -223,7 +256,6 @@ function setupTagInput() {
     const container = Modal.getElement('#tag-input');
     if (!container) return;
 
-    // Başlangıç tag'lerini al
     const tagsStr = container.getAttribute('data-tags') || '';
     const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
     window._currentTags = tags;
@@ -269,13 +301,17 @@ async function saveScenario(publicId) {
 
     const formData = new FormData(form);
 
+    // Checkbox değerini güvenli şekilde al
+    const isHeadless = form.querySelector('input[name="headless"]')?.checked || false;
+
     const payload = {
         name: formData.get('name'),
         description: formData.get('description'),
         baseUrl: formData.get('baseUrl'),
+        status: formData.get('status'),
         tags: window._currentTags || [],
         browserConfig: {
-            headless: form.headless.checked,
+            headless: isHeadless,
             viewportWidth: parseInt(formData.get('viewportWidth')) || 1920,
             viewportHeight: parseInt(formData.get('viewportHeight')) || 1080,
             defaultWaitSeconds: parseInt(formData.get('waitSeconds')) || 5

@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -27,17 +28,11 @@ public class ReportService {
     private final ExecutionStepResultRepository stepResultRepo;
 
     public ExecutionReportDto buildExecutionReport(UUID executionPublicId) {
-        // findByPublicId yerine mevcut method kullanılıyor
         Execution exec = executionRepo.findByPublicIdWithScenario(executionPublicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Execution", executionPublicId));
 
-        // Mevcut repository method adına göre çağrı
-        List<ExecutionStepResult> stepResults =
-                stepResultRepo.findByExecutionIdOrdered(exec.getId());
-
-        List<StepResultReportDto> stepDtos = stepResults.stream()
-                .map(this::toStepDto)
-                .toList();
+        List<ExecutionStepResult> stepResults = stepResultRepo.findByExecutionIdOrdered(exec.getId());
+        List<StepResultReportDto> stepDtos = stepResults.stream().map(this::toStepDto).toList();
 
         return new ExecutionReportDto(
                 exec.getPublicId().toString(),
@@ -60,22 +55,29 @@ public class ReportService {
     }
 
     public Page<ReportListItemDto> listReports(ReportFilterDto filter, Pageable pageable) {
-        // Parametre çözümlemeleri method çağrısının dışında yapılıyor
         String scenarioName = filter.scenarioName() != null ? filter.scenarioName().trim() : "";
 
+        // Status null ise veritabanında patlamaması için bayrak (flag) kullanıyoruz
         ExecutionStatus executionStatus = null;
+        boolean statusIsNull = true;
         if (filter.status() != null && !filter.status().isBlank()) {
             executionStatus = ExecutionStatus.valueOf(filter.status());
+            statusIsNull = false;
         }
 
         String username = filter.username() != null ? filter.username() : "";
 
+        // NULL TARİH KRİZİNE SON: Değer gelmezse 1970 ile 2999 arasını aratıyoruz
+        Instant fromDate = filter.fromDate() != null ? filter.fromDate() : Instant.EPOCH;
+        Instant toDate = filter.toDate() != null ? filter.toDate() : Instant.parse("2999-12-31T23:59:59Z");
+
         return executionRepo.findAllFiltered(
                 scenarioName,
                 executionStatus,
+                statusIsNull, // SQL'deki hata üreten IS NULL kontrolünün yerini aldı
                 username,
-                filter.fromDate(),
-                filter.toDate(),
+                fromDate,
+                toDate,
                 pageable
         ).map(this::toListItem);
     }
@@ -94,8 +96,7 @@ public class ReportService {
                                   : (double) e.getPassedSteps() / e.getTotalSteps() * 100)
                 .average().orElse(0.0);
 
-        String scenarioName = last10.isEmpty() ? "" :
-                last10.get(0).getScenario().getName();
+        String scenarioName = last10.isEmpty() ? "" : last10.get(0).getScenario().getName();
 
         return new ScenarioSummaryDto(
                 scenarioPublicId.toString(),
@@ -123,7 +124,6 @@ public class ReportService {
         double passRate = exec.getTotalSteps() == 0 ? 0 :
                 (double) exec.getPassedSteps() / exec.getTotalSteps() * 100;
 
-        // java.util.List — tam qualified name ile OpenPDF List çakışması engellendi
         List<StepResultReportDto> failed = steps.stream()
                 .filter(s -> "FAILED".equals(s.status())).toList();
 
@@ -142,11 +142,10 @@ public class ReportService {
     }
 
     private StepResultReportDto toStepDto(ExecutionStepResult s) {
-        // actionType enum olduğu için .name() ile String'e çevrilir
         return new StepResultReportDto(
                 s.getId(),
                 s.getStepOrder(),
-                s.getActionType(),   // ActionType enum olarak tutuluyor
+                s.getActionType(),
                 s.getDescription(),
                 s.getStatus().name(),
                 s.getDurationMs(),

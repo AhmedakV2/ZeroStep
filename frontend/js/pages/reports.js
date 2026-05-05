@@ -55,6 +55,7 @@ async function loadExecutionsReport() {
         else if (response?.data?.content) items = response.data.content;
 
         renderExecutions(items);
+        renderPagination(response);
     } catch (err) {
         Toast.error('Yükleme hatası: ' + err.message);
     }
@@ -99,6 +100,22 @@ function renderExecutions(items) {
             </tr>
         `;
     }).join('');
+}
+
+function renderPagination(data) {
+    const container = document.getElementById('pagination-container');
+    if (!container || !data || data.totalPages <= 1) {
+        if (container) container.innerHTML = '';
+        return;
+    }
+    const html = `
+        <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; align-items: center;">
+            <button ${currentPage === 0 ? 'disabled' : ''} onclick="currentPage--; loadExecutionsReport();" class="btn btn-ghost btn-sm">← Önceki</button>
+            <span style="font-size: 0.85rem; color: var(--clr-text-muted);">Sayfa ${currentPage + 1} / ${data.totalPages}</span>
+            <button ${currentPage >= data.totalPages - 1 ? 'disabled' : ''} onclick="currentPage++; loadExecutionsReport();" class="btn btn-ghost btn-sm">Sonraki →</button>
+        </div>
+    `;
+    container.innerHTML = html;
 }
 
 async function loadScenariosForSelector() {
