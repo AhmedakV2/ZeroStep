@@ -212,7 +212,7 @@
 /* ── Topbar ───────────────────────────────────────────── */
 .topbar {
     grid-area: topbar;
-    height: 56px;
+    height: 60px;
     background: var(--clr-surface);
     border-bottom: 1px solid var(--clr-border);
     display: flex;

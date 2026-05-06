@@ -8,7 +8,6 @@ const Sidebar = (() => {
         { label: 'Raporlar',             href: 'pages/reports.html',            icon: '◫', roles: null },
         { label: 'Zamanlanmış Görevler', href: 'pages/schedules.html',          icon: '◷', roles: null },
         { label: 'Mesajlar',             href: 'pages/chat.html',               icon: '◈', roles: null, badge: 'msg' },
-        { label: 'Bildirimler',          href: 'pages/notifications.html',      icon: '◉', roles: null, badge: 'notif' },
         { label: 'Duyurular',            href: 'pages/announcements.html',      icon: '◎', roles: null },
         {
             label: 'Yönetim', icon: '◰', roles: ['ADMIN'],

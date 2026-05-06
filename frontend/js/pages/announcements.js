@@ -51,7 +51,6 @@ function setupTabNavigation() {
 
 function setupAdminTabEvents() {
     document.getElementById('btn-new-ann').addEventListener('click', openCreateModal);
-    document.getElementById('btn-new-ann-admin').addEventListener('click', openCreateModal);
 }
 
 // ═══════════════════════════════════════════════════════════

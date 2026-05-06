@@ -67,9 +67,9 @@ async function loadRecentExecutions() {
     const tbody = document.getElementById('executions-body');
 
     try {
-        // GET /api/v1/reports?size=50 - sort=startedAt,desc
+        // GET /api/v1/reports?size=10 - sort=startedAt,desc
         const raw = await Api.get('/reports', {
-            size: 50,
+            size: 10,
             sort: 'startedAt,desc'
         });
         let items = [];
@@ -127,60 +127,6 @@ async function loadRecentExecutions() {
         tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="padding:1rem">
             Veriler yüklenemedi: ${Utils.escHtml(err.message)}
         </td></tr>`;
-    }
-}
-
-// ── Son Bildirimler ────────────────────────────────────────────
-async function loadRecentNotifications() {
-    const container = document.getElementById('notifications-list');
-
-    try {
-        // GET /api/v1/notifications?size=5
-        const raw = await Api.get('/notifications', { size: 5 });
-        let items = [];
-
-        if (raw?.content) items = raw.content;
-        else if (Array.isArray(raw)) items = raw;
-        else if (raw?.data?.content) items = raw.data.content;
-
-        if (items.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <span class="empty-state-icon">◉</span>
-                    <p class="empty-state-msg">Okunmamış bildirim yok.</p>
-                </div>`;
-            return;
-        }
-
-        container.innerHTML = `
-            <ul style="list-style:none;padding:0;margin:0">
-                ${items.map(n => `
-                    <li style="
-                        display:flex;gap:.75rem;align-items:flex-start;
-                        padding:.75rem 1.25rem;
-                        border-bottom:1px solid var(--clr-border);
-                        ${!n.read ? 'background:rgba(61,122,237,.05)' : ''}
-                    ">
-                        <span style="font-size:1.1rem;opacity:.6">${notifIcon(n.type)}</span>
-                        <div style="flex:1;min-width:0">
-                            <div style="font-size:.88rem;font-weight:${n.read ? 400 : 600};color:var(--clr-text);">
-                                ${Utils.escHtml(n.title)}
-                            </div>
-                            <div style="font-size:.8rem;color:var(--clr-text-muted);margin-top:2px;">
-                                ${Utils.escHtml(n.message)}
-                            </div>
-                            <div style="font-size:.75rem;color:var(--clr-text-muted);margin-top:4px;">
-                                ${Utils.formatDate(n.createdAt)}
-                            </div>
-                        </div>
-                        ${!n.read ? '<span class="badge badge-primary" style="flex-shrink:0">Yeni</span>' : ''}
-                    </li>`).join('')}
-            </ul>`;
-    } catch (err) {
-        console.error('Bildirimler yüklenemedi:', err);
-        container.innerHTML = `<div class="empty-state">
-            <p class="empty-state-msg">Bildirimler yüklenemedi.</p>
-        </div>`;
     }
 }
 

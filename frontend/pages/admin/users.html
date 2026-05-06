@@ -3,66 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZeroStep — Kullanıcılar</title>
+    <title>ZeroStep — Kullanıcı Yönetimi</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- CSS Yolları (Admin klasöründe olduğun için ../../ kullanıldı) -->
     <link rel="stylesheet" href="../../assets/css/main.css">
     <link rel="stylesheet" href="../../assets/css/components.css">
     <link rel="stylesheet" href="../../assets/css/layout.css">
+
+    <style>
+        /* Sayfaya özel ek düzenlemeler */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .filter-bar {
+            margin-bottom: 1.5rem;
+            background: var(--clr-surface);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--clr-border);
+        }
+    </style>
 </head>
 <body>
+
 <div id="toast-container"></div>
+
 <div class="app-shell">
-    <aside class="sidebar" id="sidebar"></aside>
-    <header class="topbar" id="topbar"></header>
-    <main class="main-content">
+    <!-- Sidebar: dashboard.js'deki gibi aynı ID -->
+    <aside class="sidebar" id="sidebar" role="complementary"></aside>
+
+    <!-- Topbar: dashboard.js'deki gibi aynı ID -->
+    <header class="topbar" id="topbar" role="banner"></header>
+
+    <!-- Main Content -->
+    <main class="main-content" id="main-content">
+        <!-- Sayfa Başlığı ve Yeni Kullanıcı Butonu -->
         <div class="page-header">
             <div class="page-header-left">
                 <h2 class="page-title">Kullanıcı Yönetimi</h2>
-                <p class="page-subtitle">Sistem kullanıcıları</p>
+                <p class="page-subtitle" style="color: var(--clr-text-light);">Sistem kullanıcılarını ve yetkilerini yönetin</p>
             </div>
-            <button class="btn btn-primary" id="create-user-btn">+ Yeni Kullanıcı</button>
+            <button class="btn btn-primary" id="create-user-btn">
+                <i class="fas fa-plus"></i> Yeni Kullanıcı
+            </button>
         </div>
 
-        <div class="filter-bar">
-            <input type="text" class="form-input" id="user-search" placeholder="Kullanıcı adı veya e-posta ara…" style="max-width:300px">
+        <!-- Filtreleme Alanı -->
+        <div class="card filter-bar">
+            <div class="form-group" style="margin-bottom: 0;">
+                <input type="text" class="form-input" id="user-search" placeholder="Kullanıcı adı veya e-posta ara…" style="max-width:400px">
+            </div>
         </div>
 
-        <div class="table-wrapper">
-            <table class="data-table">
-                <thead>
-                <tr>
-                    <th>Kullanıcı Adı</th>
-                    <th>E-posta</th>
-                    <th>Roller</th>
-                    <th>Durum</th>
-                    <th>Son Giriş</th>
-                    <th>İşlemler</th>
-                </tr>
-                </thead>
-                <tbody id="users-body">
-                <tr><td colspan="6">
-                    <div class="empty-state">
-                        <span class="empty-state-msg">Yükleniyor…</span>
-                    </div>
-                </td></tr>
-                </tbody>
-            </table>
+        <!-- Kullanıcı Tablosu -->
+        <div class="card p-0">
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Kullanıcı Adı</th>
+                        <th>E-posta</th>
+                        <th>Roller</th>
+                        <th>Durum</th>
+                        <th>Son Giriş</th>
+                        <th style="text-align: right;">İşlemler</th>
+                    </tr>
+                    </thead>
+                    <tbody id="users-body">
+                    <!-- admin-users.js tarafından doldurulacak -->
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <span class="spinner"></span>
+                                <p class="empty-state-msg">Kullanıcılar yükleniyor...</p>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <div class="pagination-wrapper" id="pagination"></div>
+
+        <!-- Pagination -->
+        <div class="pagination-wrapper mt-4" id="pagination"></div>
     </main>
 </div>
+
+<!-- Scriptler: Önce çekirdek kütüphaneler, sonra bileşenler, en son sayfa mantığı -->
 <script src="../../assets/js/utils.js"></script>
 <script src="../../assets/js/store.js"></script>
 <script src="../../assets/js/toast.js"></script>
 <script src="../../assets/js/api.js"></script>
 <script src="../../assets/js/auth.js"></script>
 <script src="../../assets/js/router.js"></script>
+
+<!-- Bileşenler -->
 <script src="../../js/components/sidebar.js"></script>
 <script src="../../js/components/topbar.js"></script>
 <script src="../../js/components/pagination.js"></script>
 <script src="../../js/components/modal.js"></script>
 <script src="../../js/components/confirm-dialog.js"></script>
+
+<!-- Sayfa Mantığı (API çağrıları ve tabloyu doldurma burada yapılır) -->
 <script src="../../js/pages/admin-users.js"></script>
+
+<script>
+    // Sayfa yüklendiğinde Sidebar ve Topbar'ı başlat
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof Sidebar !== 'undefined') {
+            Sidebar.render('sidebar');
+        }
+        if (typeof Topbar !== 'undefined') {
+            Topbar.render('topbar', 'Kullanıcı Yönetimi');
+        }
+    });
+</script>
+
 </body>
 </html>
