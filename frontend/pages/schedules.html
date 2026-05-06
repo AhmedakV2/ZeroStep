@@ -1,10 +1,377 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroStep — Zamanlanmış Görevler</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/layout.css">
+    <style>
+        /* ── Schedule Kartları ──────────────────────────────── */
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1rem;
+        }
+
+        .schedule-card {
+            background: var(--clr-surface);
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow var(--transition), border-color var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .schedule-card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: rgba(61,122,237,.3);
+        }
+
+        .schedule-card.disabled {
+            opacity: .55;
+        }
+
+        /* Sol kenar aksan rengi */
+        .schedule-card::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+            background: var(--clr-primary);
+            border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+        }
+        .schedule-card.disabled::before { background: var(--clr-text-muted); }
+
+        .schedule-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: .75rem;
+            margin-bottom: .875rem;
+        }
+
+        .schedule-scenario-name {
+            font-size: .9rem;
+            font-weight: 700;
+            color: var(--clr-text);
+            line-height: 1.35;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .schedule-actions {
+            display: flex;
+            gap: .2rem;
+            flex-shrink: 0;
+        }
+
+        .schedule-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .5rem;
+        }
+
+        .schedule-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: .15rem;
+        }
+
+        .schedule-info-label {
+            font-size: .65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--clr-text-muted);
+        }
+
+        .schedule-info-value {
+            font-size: .8rem;
+            color: var(--clr-text);
+            font-family: var(--font-ui);
+        }
+
+        .schedule-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 1rem;
+            padding-top: .75rem;
+            border-top: 1px solid var(--clr-border);
+            gap: .5rem;
+        }
+
+        .schedule-creator {
+            font-size: .72rem;
+            color: var(--clr-text-muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Frekans badge'i */
+        .freq-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            padding: .15rem .55rem;
+            border-radius: 99px;
+            font-size: .7rem;
+            font-weight: 700;
+            letter-spacing: .03em;
+            font-family: var(--font-ui);
+        }
+
+        .freq-HOURLY  { background: rgba(46,184,126,.15); color: var(--clr-success); }
+        .freq-DAILY   { background: rgba(61,122,237,.15); color: var(--clr-primary-h); }
+        .freq-WEEKLY  { background: rgba(224,144,64,.15); color: var(--clr-warning); }
+
+        /* Toggle switch */
+        .toggle-switch-wrap {
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+        }
+
+        .toggle-sw {
+            position: relative;
+            width: 34px;
+            height: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .toggle-sw input { opacity: 0; width: 0; height: 0; }
+
+        .toggle-sw-slider {
+            position: absolute;
+            inset: 0;
+            background: var(--clr-border);
+            border-radius: 99px;
+            transition: background .2s;
+        }
+
+        .toggle-sw-slider::before {
+            content: '';
+            position: absolute;
+            width: 12px; height: 12px;
+            left: 3px; bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform .2s;
+        }
+
+        .toggle-sw input:checked + .toggle-sw-slider { background: var(--clr-primary); }
+        .toggle-sw input:checked + .toggle-sw-slider::before { transform: translateX(16px); }
+
+        .toggle-label {
+            font-size: .75rem;
+            color: var(--clr-text-muted);
+            user-select: none;
+        }
+
+        /* Boş Durum */
+        .schedule-empty {
+            grid-column: 1 / -1;
+            padding: 4rem 2rem;
+            text-align: center;
+            color: var(--clr-text-muted);
+        }
+
+        .schedule-empty-icon {
+            font-size: 3rem;
+            opacity: .12;
+            display: block;
+            margin-bottom: 1rem;
+        }
+
+        /* Modal: Alıcı tag input */
+        .tag-input-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .35rem;
+            padding: .5rem .75rem;
+            background: var(--clr-surface-2);
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-sm);
+            min-height: 2.5rem;
+            cursor: text;
+            transition: border-color var(--transition);
+        }
+
+        .tag-input-wrap:focus-within { border-color: var(--clr-border-focus); }
+
+        .recipient-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: .25rem;
+            background: rgba(61,122,237,.15);
+            color: var(--clr-primary-h);
+            border: 1px solid rgba(61,122,237,.25);
+            border-radius: 99px;
+            padding: .1rem .5rem;
+            font-size: .75rem;
+            font-weight: 600;
+        }
+
+        .recipient-tag button {
+            background: none; border: none;
+            color: currentColor; cursor: pointer;
+            padding: 0; font-size: .8rem; line-height: 1; opacity: .7;
+        }
+
+        .recipient-tag button:hover { opacity: 1; }
+
+        .tag-input-field {
+            flex: 1; min-width: 140px;
+            background: none; border: none; outline: none;
+            color: var(--clr-text); font-family: var(--font-body);
+            font-size: .9rem;
+        }
+
+        /* Frekans radio group */
+        .freq-radio-group {
+            display: flex;
+            gap: .5rem;
+        }
+
+        .freq-radio-btn {
+            flex: 1;
+            text-align: center;
+            padding: .55rem .5rem;
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: .82rem;
+            font-weight: 600;
+            transition: all var(--transition);
+            user-select: none;
+            font-family: var(--font-body);
+        }
+
+        .freq-radio-btn input { display: none; }
+
+        .freq-radio-btn:has(input:checked) {
+            border-color: var(--clr-primary);
+            background: rgba(61,122,237,.1);
+            color: var(--clr-primary-h);
+        }
+
+        /* Haftanın günleri */
+        .weekday-group {
+            display: flex;
+            gap: .3rem;
+            flex-wrap: wrap;
+        }
+
+        .weekday-btn {
+            width: 2.4rem;
+            height: 2.4rem;
+            border-radius: 50%;
+            border: 1px solid var(--clr-border);
+            background: transparent;
+            color: var(--clr-text-muted);
+            font-size: .75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-ui);
+        }
+
+        .weekday-btn.active {
+            border-color: var(--clr-primary);
+            background: var(--clr-primary);
+            color: #fff;
+        }
+
+        /* Şimdi çalıştır sonucu */
+        .run-result-banner {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            padding: .65rem 1rem;
+            background: rgba(46,184,126,.1);
+            border: 1px solid rgba(46,184,126,.3);
+            border-radius: var(--radius-sm);
+            color: var(--clr-success);
+            font-size: .85rem;
+            margin-top: .75rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .schedule-grid { grid-template-columns: 1fr; }
+            .freq-radio-group { flex-direction: column; }
+        }
+    </style>
 </head>
 <body>
+<div id="toast-container"></div>
 
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <header class="topbar" id="topbar"></header>
+
+    <main class="main-content">
+        <!-- Sayfa başlığı -->
+        <div class="page-header">
+            <div class="page-header-left">
+                <h2 class="page-title">Zamanlanmış Görevler</h2>
+                <p class="page-subtitle">Senaryoların periyodik çalışma planlarını yönetin</p>
+            </div>
+            <button class="btn btn-primary" id="btn-new-schedule">+ Yeni Plan</button>
+        </div>
+
+        <!-- Filtre bar -->
+        <div class="filter-bar">
+            <select class="form-input" id="filter-status" style="width:180px;">
+                <option value="">Tüm Durumlar</option>
+                <option value="active">Aktif</option>
+                <option value="disabled">Pasif</option>
+            </select>
+            <select class="form-input" id="filter-freq" style="width:180px;">
+                <option value="">Tüm Sıklıklar</option>
+                <option value="HOURLY">Saatlik</option>
+                <option value="DAILY">Günlük</option>
+                <option value="WEEKLY">Haftalık</option>
+            </select>
+        </div>
+
+        <!-- Schedule kartları -->
+        <div class="schedule-grid" id="schedule-grid">
+            <div class="schedule-empty">
+                <span class="schedule-empty-icon">◷</span>
+                <div style="font-size:.9rem;font-weight:600;color:var(--clr-text);margin-bottom:.35rem;">
+                    Yükleniyor...
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Scripts -->
+<script src="../assets/js/utils.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/toast.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/router.js"></script>
+<script src="../js/components/sidebar.js"></script>
+<script src="../js/components/topbar.js"></script>
+<script src="../js/components/modal.js"></script>
+<script src="../js/components/confirm-dialog.js"></script>
+<script src="../js/pages/schedules.js"></script>
 </body>
 </html>
