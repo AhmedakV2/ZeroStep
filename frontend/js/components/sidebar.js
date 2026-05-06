@@ -73,9 +73,16 @@ const Sidebar = (() => {
     // pages/X.html → doğru relative path hesapla
     function _resolveHref(href) {
         const cur = window.location.pathname;
-        // Admin alt dizininde isek üst dizine çık
-        if (cur.includes('/admin/')) return '../' + href;
-        if (cur.includes('/pages/')) return href.replace('pages/', '');
+        // Admin alt dizininde isek (pages/admin/users.html) üst üste çık
+        if (cur.includes('/admin/')) {
+            // pages/admin/users.html → ../../pages/dashboard.html
+            // pages/admin/roles.html → ../../pages/scenarios.html
+            return '../../' + href;
+        }
+        if (cur.includes('/pages/')) {
+            // pages/dashboard.html → ./dashboard.html ya da sadece dashboard.html
+            return href.replace('pages/', '');
+        }
         return href;
     }
 

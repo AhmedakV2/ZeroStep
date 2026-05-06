@@ -18,8 +18,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -195,7 +193,7 @@ public class AdminUserService {
     }
 
 
-    // SILME (SOFT DELETE)
+    // SILME (HARD DELETE)
     @Transactional
     public void deleteUser(UUID publicId,String actingUsername) {
         User user = findOrThrow(publicId);
@@ -207,15 +205,17 @@ public class AdminUserService {
             throw new ForbiddenException("Sistemdeki son admin silinemez");
         }
 
-        user.setDeletedAt(Instant.now());
-        user.setEnabled(false);
-        userRepository.save(user);
-
+        // Önce token'ları iptal et
         refreshTokenService.revokeAll(user);
 
+        // Audit kaydını tut
         auditService.record("USER_DELETED", "USER", user.getId(),
-                Map.of("username", user.getUsername()));
-        log.info("Admin kullanici sildi (soft): {}", user.getUsername());
+                Map.of("username", user.getUsername(), "action", "HARD_DELETE"));
+
+        // Veritabanından tamamen sil
+        userRepository.delete(user);
+
+        log.info("Admin kullanici sildi (hard delete): {}", user.getUsername());
     }
 
     // YARDIMCI METODLAR

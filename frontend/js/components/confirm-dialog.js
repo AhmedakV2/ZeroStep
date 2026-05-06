@@ -24,5 +24,5 @@ const ConfirmDialog = (() => {
         });
     }
 
-    return { show };
+    return { show, close: () => Modal.close() };
 })();
