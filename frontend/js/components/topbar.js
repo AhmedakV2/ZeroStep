@@ -85,7 +85,14 @@ const Topbar = (() => {
 
         // Logout
         container.querySelector('#topbar-logout-btn')?.addEventListener('click', async () => {
-            await Auth.logout();
+            try {
+                await Auth.logout();
+                // Giriş sayfasına yönlendir
+                window.location.href = _resolveRoot() + 'index.html';
+            } catch (error) {
+                console.error('Logout hatası:', error);
+                Toast.error('Çıkış yapılırken bir hata oluştu');
+            }
         });
     }
 

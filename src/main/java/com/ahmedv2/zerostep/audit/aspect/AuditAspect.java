@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-// @Auditable taşıyan metodları around advice ile sarmalar
+
 @Aspect
 @Component
 @RequiredArgsConstructor
