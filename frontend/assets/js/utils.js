@@ -1,6 +1,5 @@
 // Genel yardımcı fonksiyonlar
 const Utils = {
-    // XSS koruması için HTML escape
     escHtml(str) {
         return String(str)
             .replace(/&/g, '&amp;')
@@ -10,7 +9,6 @@ const Utils = {
             .replace(/'/g, '&#39;');
     },
 
-    // Timestamp'ı okunabilir formata çevir
     formatDate(iso) {
         if (!iso) return '-';
         return new Intl.DateTimeFormat('tr-TR', {
@@ -19,7 +17,6 @@ const Utils = {
         }).format(new Date(iso));
     },
 
-    // ms cinsinden süreyi okunabilir yap
     formatDuration(ms) {
         if (ms == null) return '-';
         if (ms < 1000) return `${ms}ms`;
@@ -27,7 +24,6 @@ const Utils = {
         return `${s}s`;
     },
 
-    // Sayfalama için sayfa listesi üret
     pageRange(current, total) {
         const range = [];
         const delta = 2;
@@ -37,17 +33,14 @@ const Utils = {
         return range;
     },
 
-    // Boş string kontrolü
     isBlank(str) { return !str || !str.trim(); },
 
-    // Form'dan data object üret
     formData(formEl) {
         const data = {};
         new FormData(formEl).forEach((v, k) => { data[k] = v; });
         return data;
     },
 
-    // Debounce — arama input'ları için
     debounce(fn, delay = 300) {
         let timer;
         return (...args) => {
@@ -56,11 +49,41 @@ const Utils = {
         };
     },
 
-    // Deep clone
     clone(obj) { return JSON.parse(JSON.stringify(obj)); },
 
-    // Query param parse
     parseParams(search) {
         return Object.fromEntries(new URLSearchParams(search));
     },
 };
+
+// ── TEMA YÖNETİMİ (Global) ──────────────────────────────────
+const ThemeManager = {
+    STORAGE_KEY: 'zs_theme',
+
+    get() {
+        // Eğer localStorage'da kayıt yoksa varsayılan olarak 'dark' döner.
+        return localStorage.getItem(this.STORAGE_KEY) || 'dark';
+    },
+
+    set(theme) {
+        localStorage.setItem(this.STORAGE_KEY, theme);
+        this.apply(theme);
+    },
+
+    apply(theme) {
+        const t = theme || this.get();
+        // Eğer tema 'light' ise body etiketine 'theme-light' class'ı ekler.
+        document.body.classList.toggle('theme-light', t === 'light');
+    }
+};
+
+// Diğer scriptlerden erişebilmek için window nesnesine atıyoruz
+window.ThemeManager = ThemeManager;
+
+// ── TEMA OTOMATIK TETİKLEME ─────────────────────────────────
+// Sayfa DOM ağacı oluşturulduğu an bu kod çalışır.
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.ThemeManager) {
+        ThemeManager.apply();
+    }
+});

@@ -1,28 +1,55 @@
 // Ayarlar sayfası — Profil, Bildirim Tercihleri, Görünüm
-(async function init() {
-    if (!Auth.isLoggedIn()) { window.location.href = '../index.html'; return; }
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🔧 Ayarlar sayfası başlatılıyor...');
 
-    Sidebar.render('sidebar');
-    Topbar.render('topbar', 'Ayarlar');
+    if (!Auth.isLoggedIn()) {
+        console.log('⚠️ Giriş yapılmamış, login sayfasına yönlendiriliyor...');
+        window.location.href = '../index.html';
+        return;
+    }
 
-    // Kayıtlı temayı uygula
-    ThemeManager.apply();
+    try {
+        console.log('📐 Sidebar ve Topbar render ediliyor...');
+        Sidebar.render('sidebar');
+        Topbar.render('topbar', 'Ayarlar');
 
-    setupTabs();
-    await loadProfile();
-    await loadNotificationPrefs();
-    setupThemeTab();
-    setupPasswordModal();
-})();
+        // Not: Tema utils.js içindeki event listener sayesinde otomatik uygulanıyor.
+        // Ama manuel olarak da burda garantiye alabiliriz:
+        ThemeManager.apply();
+
+        console.log('⚙️ Bileşenler kuruluyordu...');
+        setupTabs();
+        await loadProfile();
+        await loadNotificationPrefs();
+        setupThemeTab();
+        setupPasswordModal();
+
+        console.log('✅ Ayarlar sayfası başarıyla yüklendi!');
+    } catch (err) {
+        console.error('❌ Sayfa başlatılırken hata:', err);
+        Toast.error('Sayfa başlatılırken bir hata oluştu.');
+    }
+});
 
 // ── SEKME YÖNETİMİ ──────────────────────────────────────────
 function setupTabs() {
-    document.querySelectorAll('.settings-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
+    const tabs = document.querySelectorAll('.settings-tab');
+
+    if (tabs.length === 0) return;
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tabName = tab.dataset.tab;
+            const panel = document.getElementById('panel-' + tabName);
+
+            if (!panel) return;
+
             document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+
             tab.classList.add('active');
-            document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+            panel.classList.add('active');
         });
     });
 }
@@ -31,24 +58,37 @@ function setupTabs() {
 async function loadProfile() {
     try {
         const user = await Api.get('/users/me');
-        document.getElementById('prof-username').textContent    = user.username    || '—';
-        document.getElementById('prof-email').textContent       = user.email       || '—';
-        document.getElementById('prof-display').textContent     = user.displayName || '—';
-        document.getElementById('prof-roles').textContent       = (user.roles || []).join(', ') || '—';
-        document.getElementById('prof-created').textContent     = Utils.formatDate(user.createdAt);
-        document.getElementById('prof-lastlogin').textContent   = Utils.formatDate(user.lastLoginAt);
+        if (!user) throw new Error('Sunucu boş cevap döndü');
 
-        // Avatar baş harfler
+        const setIfExists = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value || '—';
+        };
+
+        setIfExists('prof-username', user.username);
+        setIfExists('prof-email', user.email);
+        setIfExists('prof-display', user.displayName);
+        setIfExists('prof-roles', (user.roles || []).join(', '));
+        setIfExists('prof-created', Utils.formatDate(user.createdAt));
+        setIfExists('prof-lastlogin', Utils.formatDate(user.lastLoginAt));
+
         const initials = (user.displayName || user.username || '?').slice(0, 2).toUpperCase();
-        document.getElementById('prof-avatar').textContent = initials;
+        const avatarEl = document.getElementById('prof-avatar');
+        if (avatarEl) avatarEl.textContent = initials;
+
     } catch (err) {
-        Toast.error('Profil yüklenemedi: ' + err.message);
+        console.error('❌ Profil yüklenirken hata:', err);
+        const uEl = document.getElementById('prof-username');
+        if(uEl) uEl.textContent = 'Yüklenirken hata oluştu';
     }
 }
 
 // ── ŞİFRE MODALİ ────────────────────────────────────────────
 function setupPasswordModal() {
-    document.getElementById('btn-change-password').addEventListener('click', () => {
+    const btn = document.getElementById('btn-change-password');
+    if(!btn) return;
+
+    btn.addEventListener('click', () => {
         Modal.open({
             title: 'Şifre Değiştir',
             contentHTML: `
@@ -85,12 +125,12 @@ async function submitPasswordChange() {
     const confirm  = document.getElementById('cpw-confirm')?.value  || '';
     const errorEl  = document.getElementById('cpw-error');
 
-    // Temizle
     ['cpw-current', 'cpw-new', 'cpw-confirm'].forEach(id => {
-        document.getElementById(id + '-err').textContent = '';
+        const errEl = document.getElementById(id + '-err');
+        if(errEl) errEl.textContent = '';
         document.getElementById(id)?.classList.remove('is-error');
     });
-    errorEl.classList.add('hidden');
+    if(errorEl) errorEl.classList.add('hidden');
 
     let valid = true;
     if (!current) { setErr('cpw-current', 'Mevcut şifre zorunlu'); valid = false; }
@@ -107,17 +147,19 @@ async function submitPasswordChange() {
         await Api.post('/users/me/change-password', { currentPassword: current, newPassword: newPwd });
         Toast.success('Şifre değiştirildi. Yeniden giriş yapmanız gerekiyor.');
         Modal.close();
-        // 1.5 sn sonra logout
         setTimeout(() => Auth.logout(), 1500);
     } catch (err) {
-        errorEl.textContent = err.message || 'Şifre değiştirilemedi';
-        errorEl.classList.remove('hidden');
+        if(errorEl){
+            errorEl.textContent = err.message || 'Şifre değiştirilemedi';
+            errorEl.classList.remove('hidden');
+        }
         throw err;
     }
 }
 
 function setErr(id, msg) {
-    document.getElementById(id + '-err').textContent = msg;
+    const errEl = document.getElementById(id + '-err');
+    if(errEl) errEl.textContent = msg;
     document.getElementById(id)?.classList.add('is-error');
 }
 
@@ -133,8 +175,16 @@ const NOTIF_LABELS = {
 
 async function loadNotificationPrefs() {
     const container = document.getElementById('notif-prefs-list');
+    if (!container) return;
+
     try {
         const prefs = await Api.get('/notifications/preferences');
+
+        if (!prefs || prefs.length === 0) {
+            container.innerHTML = '<div style="padding:1rem;color:var(--clr-text-muted);font-size:.85rem;">Tercih bulunamadı.</div>';
+            return;
+        }
+
         container.innerHTML = prefs.map(p => {
             const cfg = NOTIF_LABELS[p.type] || { label: p.type, icon: 'ℹ' };
             const inApp  = (p.channels || []).includes('IN_APP');
@@ -162,17 +212,20 @@ async function loadNotificationPrefs() {
             </div>`;
         }).join('');
 
-        // Kanal chip toggle
         container.querySelectorAll('.channel-chip').forEach(chip => {
-            chip.addEventListener('click', () => chip.classList.toggle('active'));
+            chip.addEventListener('click', () => {
+                chip.classList.toggle('active');
+            });
         });
     } catch (err) {
-        container.innerHTML = `<div class="text-muted" style="padding:1rem;">Yüklenemedi: ${Utils.escHtml(err.message)}</div>`;
+        container.innerHTML = `<div class="text-muted" style="padding:1rem;color:var(--clr-text-muted);">Yüklenemedi: ${Utils.escHtml(err.message)}</div>`;
     }
 }
 
 async function saveNotificationPrefs() {
     const btn = document.getElementById('btn-save-notifs');
+    if(!btn) return;
+
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>';
 
@@ -205,37 +258,26 @@ async function saveNotificationPrefs() {
 
 document.getElementById('btn-save-notifs')?.addEventListener('click', saveNotificationPrefs);
 
-// ── TEMA YÖNETİMİ ───────────────────────────────────────────
-const ThemeManager = {
-    STORAGE_KEY: 'zs_theme',
-
-    get() { return localStorage.getItem(this.STORAGE_KEY) || 'dark'; },
-
-    set(theme) {
-        localStorage.setItem(this.STORAGE_KEY, theme);
-        this.apply(theme);
-    },
-
-    apply(theme) {
-        const t = theme || this.get();
-        document.body.classList.toggle('theme-light', t === 'light');
-    }
-};
-
-// Tema global uygulama (diğer sayfalar da kullanabilsin diye window'a koy)
-window.ThemeManager = ThemeManager;
-
+// ── TEMA EKRANI (Arayüz İşlemleri) ──────────────────────────────────
 function setupThemeTab() {
     const current = ThemeManager.get();
+    const themeCards = document.querySelectorAll('.theme-card');
 
-    // Tema kartlarını işaretle
-    document.querySelectorAll('.theme-card').forEach(card => {
-        card.classList.toggle('selected', card.dataset.theme === current);
+    if (themeCards.length === 0) return;
+
+    themeCards.forEach(card => {
+        const isSelected = card.dataset.theme === current;
+        card.classList.toggle('selected', isSelected);
+
         card.addEventListener('click', () => {
-            document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
+            themeCards.forEach(c => c.classList.remove('selected'));
             card.classList.add('selected');
-            ThemeManager.set(card.dataset.theme);
-            Toast.success(`${card.dataset.theme === 'dark' ? 'Koyu' : 'Açık'} tema uygulandı.`);
+
+            const theme = card.dataset.theme;
+            ThemeManager.set(theme); // utils.js içindeki global manager'ı çağırır
+
+            const themeName = theme === 'dark' ? 'Koyu' : 'Açık';
+            Toast.success(`${themeName} tema uygulandı.`);
         });
     });
 }
