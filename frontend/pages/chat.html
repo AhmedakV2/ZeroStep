@@ -1,10 +1,578 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroStep — Mesajlar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/layout.css">
+    <style>
+        /* ── Chat Shell ──────────────────────────────────────── */
+        .chat-shell {
+            display: flex;
+            height: calc(100vh - 56px);
+            overflow: hidden;
+            background: var(--clr-bg);
+        }
+
+        /* ── Konuşma Listesi (Sol Panel) ─────────────────────── */
+        .conv-panel {
+            width: 300px;
+            flex-shrink: 0;
+            background: var(--clr-surface);
+            border-right: 1px solid var(--clr-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .conv-panel-header {
+            padding: 1rem 1.25rem 0.875rem;
+            border-bottom: 1px solid var(--clr-border);
+            flex-shrink: 0;
+        }
+
+        .conv-panel-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--clr-text);
+            margin-bottom: 0.75rem;
+        }
+
+        .conv-search-wrap {
+            position: relative;
+        }
+
+        .conv-search {
+            width: 100%;
+            background: var(--clr-surface-2);
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-sm);
+            color: var(--clr-text);
+            font-family: var(--font-body);
+            font-size: 0.83rem;
+            padding: 0.45rem 0.7rem 0.45rem 2rem;
+            transition: border-color var(--transition);
+            outline: none;
+        }
+
+        .conv-search:focus { border-color: var(--clr-border-focus); }
+
+        .conv-search-icon {
+            position: absolute;
+            left: 0.6rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--clr-text-muted);
+            font-size: 0.75rem;
+            pointer-events: none;
+        }
+
+        .conv-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .conv-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.25rem;
+            border-bottom: 1px solid var(--clr-border);
+            cursor: pointer;
+            transition: background var(--transition);
+            position: relative;
+        }
+
+        .conv-item:hover { background: var(--clr-surface-2); }
+
+        .conv-item.active {
+            background: rgba(61,122,237,.1);
+            border-right: 2px solid var(--clr-primary);
+        }
+
+        .conv-avatar {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 50%;
+            background: var(--clr-primary);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .conv-info { flex: 1; min-width: 0; }
+
+        .conv-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--clr-text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .conv-preview {
+            font-size: 0.75rem;
+            color: var(--clr-text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 1px;
+        }
+
+        .conv-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.25rem;
+            flex-shrink: 0;
+        }
+
+        .conv-time {
+            font-size: 0.68rem;
+            color: var(--clr-text-muted);
+            font-family: var(--font-ui);
+        }
+
+        .conv-unread-badge {
+            background: var(--clr-primary);
+            color: #fff;
+            border-radius: 99px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            min-width: 1.1rem;
+            height: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 0.2rem;
+        }
+
+        /* Yeni konuşma butonu */
+        .conv-new-btn {
+            margin: 0.75rem 1.25rem;
+            flex-shrink: 0;
+        }
+
+        /* ── Mesaj Alanı (Sağ Panel) ─────────────────────────── */
+        .msg-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--clr-bg);
+        }
+
+        /* Boş durum */
+        .msg-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            color: var(--clr-text-muted);
+        }
+
+        .msg-empty-icon {
+            font-size: 3rem;
+            opacity: 0.15;
+        }
+
+        .msg-empty-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--clr-text);
+        }
+
+        /* Mesaj paneli başlığı */
+        .msg-header {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            padding: 0.875rem 1.25rem;
+            background: var(--clr-surface);
+            border-bottom: 1px solid var(--clr-border);
+            flex-shrink: 0;
+        }
+
+        .msg-header-avatar {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background: var(--clr-primary);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .msg-header-info { flex: 1; min-width: 0; }
+
+        .msg-header-name {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--clr-text);
+        }
+
+        /* Mesaj listesi */
+        .msg-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .msg-list::-webkit-scrollbar { width: 4px; }
+        .msg-list::-webkit-scrollbar-thumb { background: var(--clr-border); border-radius: 2px; }
+
+        /* Tarih ayırıcı */
+        .msg-date-sep {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 0.75rem 0 0.25rem;
+            font-size: 0.7rem;
+            color: var(--clr-text-muted);
+            font-family: var(--font-ui);
+        }
+
+        .msg-date-sep::before,
+        .msg-date-sep::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--clr-border);
+        }
+
+        /* Mesaj satırı */
+        .msg-row {
+            display: flex;
+            flex-direction: column;
+            max-width: 70%;
+            animation: msgIn 0.18s ease;
+        }
+
+        @keyframes msgIn {
+            from { opacity: 0; transform: translateY(6px); }
+        }
+
+        .msg-row.mine {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .msg-row.theirs {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+        .msg-bubble {
+            padding: 0.55rem 0.875rem;
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            line-height: 1.55;
+            word-break: break-word;
+            white-space: pre-wrap;
+            position: relative;
+        }
+
+        .msg-row.mine .msg-bubble {
+            background: var(--clr-primary);
+            color: #fff;
+            border-bottom-right-radius: 3px;
+        }
+
+        .msg-row.theirs .msg-bubble {
+            background: var(--clr-surface);
+            color: var(--clr-text);
+            border: 1px solid var(--clr-border);
+            border-bottom-left-radius: 3px;
+        }
+
+        /* Silinmiş mesaj */
+        .msg-bubble.deleted {
+            background: transparent !important;
+            border: 1px dashed var(--clr-border) !important;
+            color: var(--clr-text-muted) !important;
+            font-style: italic;
+            font-size: 0.8rem;
+        }
+
+        .msg-time {
+            font-size: 0.65rem;
+            color: var(--clr-text-muted);
+            margin-top: 2px;
+            font-family: var(--font-ui);
+            padding: 0 0.2rem;
+        }
+
+        /* Mesaj hover menüsü */
+        .msg-row:hover .msg-actions { opacity: 1; }
+
+        .msg-actions {
+            opacity: 0;
+            display: flex;
+            gap: 0.2rem;
+            margin-bottom: 0.2rem;
+            transition: opacity var(--transition);
+        }
+
+        .msg-action-btn {
+            background: var(--clr-surface);
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-sm);
+            color: var(--clr-text-muted);
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+
+        .msg-action-btn:hover {
+            background: var(--clr-surface-2);
+            color: var(--clr-danger);
+        }
+
+        /* Giriş alanı */
+        .msg-input-area {
+            padding: 0.875rem 1.25rem;
+            background: var(--clr-surface);
+            border-top: 1px solid var(--clr-border);
+            flex-shrink: 0;
+        }
+
+        .msg-input-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.625rem;
+            background: var(--clr-surface-2);
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-md);
+            padding: 0.5rem 0.5rem 0.5rem 0.875rem;
+            transition: border-color var(--transition);
+        }
+
+        .msg-input-row:focus-within { border-color: var(--clr-border-focus); }
+
+        .msg-textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--clr-text);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            resize: none;
+            outline: none;
+            min-height: 1.4rem;
+            max-height: 8rem;
+            line-height: 1.5;
+            overflow-y: auto;
+        }
+
+        .msg-textarea::placeholder { color: var(--clr-text-muted); opacity: 0.7; }
+
+        .msg-send-btn {
+            background: var(--clr-primary);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            width: 2.25rem;
+            height: 2.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background var(--transition), transform 80ms;
+            font-size: 0.85rem;
+        }
+
+        .msg-send-btn:hover { background: var(--clr-primary-h); }
+        .msg-send-btn:active { transform: scale(0.94); }
+        .msg-send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        .msg-input-hint {
+            font-size: 0.68rem;
+            color: var(--clr-text-muted);
+            margin-top: 0.4rem;
+            padding: 0 0.2rem;
+        }
+
+        /* Yükleniyor göstergesi */
+        .msg-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: var(--clr-text-muted);
+            font-size: 0.85rem;
+            gap: 0.5rem;
+        }
+
+        /* Yeni konuşma modalı — kullanıcı arama */
+        .user-search-results {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-sm);
+            margin-top: 0.5rem;
+        }
+
+        .user-result-item {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid var(--clr-border);
+            cursor: pointer;
+            transition: background var(--transition);
+        }
+
+        .user-result-item:last-child { border-bottom: none; }
+        .user-result-item:hover { background: var(--clr-surface-2); }
+
+        .user-result-avatar {
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: 50%;
+            background: var(--clr-primary);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .user-result-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--clr-text);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .conv-panel {
+                width: 100%;
+                position: fixed;
+                inset: 56px 0 0 0;
+                z-index: 50;
+                transform: translateX(0);
+                transition: transform 0.25s ease;
+            }
+
+            .conv-panel.hidden-mobile {
+                transform: translateX(-100%);
+            }
+
+            .msg-panel { width: 100%; }
+        }
+    </style>
 </head>
 <body>
+<div id="toast-container"></div>
 
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <header class="topbar" id="topbar"></header>
+
+    <main class="main-content" style="padding:0;overflow:hidden;">
+        <div class="chat-shell">
+
+            <!-- Sol: Konuşma Listesi -->
+            <div class="conv-panel" id="conv-panel">
+                <div class="conv-panel-header">
+                    <div class="conv-panel-title">Mesajlar</div>
+                    <div class="conv-search-wrap">
+                        <span class="conv-search-icon">◈</span>
+                        <input type="text" class="conv-search" id="conv-search"
+                               placeholder="Konuşma ara...">
+                    </div>
+                </div>
+
+                <button class="btn btn-primary btn-sm conv-new-btn" id="btn-new-conv">
+                    + Yeni Konuşma
+                </button>
+
+                <div class="conv-list" id="conv-list">
+                    <div class="msg-loading">
+                        <span class="spinner" style="width:.9rem;height:.9rem;
+                            border-color:var(--clr-border);border-top-color:var(--clr-primary);"></span>
+                        Yükleniyor...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sağ: Mesaj Alanı -->
+            <div class="msg-panel" id="msg-panel">
+                <!-- Başlangıç boş durumu -->
+                <div class="msg-empty" id="msg-empty">
+                    <span class="msg-empty-icon">◈</span>
+                    <span class="msg-empty-title">Bir konuşma seçin</span>
+                    <span style="font-size:.82rem;">veya yeni bir konuşma başlatın</span>
+                </div>
+
+                <!-- Aktif konuşma (başlangıçta gizli) -->
+                <div id="msg-active" style="display:none;flex-direction:column;height:100%;">
+                    <div class="msg-header" id="msg-header">
+                        <div class="msg-header-avatar" id="msg-header-avatar">?</div>
+                        <div class="msg-header-info">
+                            <div class="msg-header-name" id="msg-header-name">—</div>
+                        </div>
+                        <!-- Mobil: geri butonu -->
+                        <button class="btn-icon" id="btn-back-conv" style="display:none;"
+                                title="Konuşmalara dön">←</button>
+                    </div>
+
+                    <div class="msg-list" id="msg-list"></div>
+
+                    <div class="msg-input-area">
+                        <div class="msg-input-row">
+                            <textarea class="msg-textarea" id="msg-textarea"
+                                      placeholder="Mesaj yaz..." rows="1"></textarea>
+                            <button class="msg-send-btn" id="msg-send-btn"
+                                    title="Gönder (Enter)" disabled>
+                                ➤
+                            </button>
+                        </div>
+                        <div class="msg-input-hint">Enter ile gönder &nbsp;·&nbsp; Shift+Enter yeni satır</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- SockJS + STOMP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<script src="../assets/js/utils.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/toast.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/router.js"></script>
+<script src="../js/components/sidebar.js"></script>
+<script src="../js/components/topbar.js"></script>
+<script src="../js/components/modal.js"></script>
+<script src="../js/components/confirm-dialog.js"></script>
+<script src="../js/pages/chat.js"></script>
 </body>
 </html>
