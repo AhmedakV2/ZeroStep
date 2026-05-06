@@ -149,9 +149,20 @@ function renderTable(items) {
     }
 
     tbody.innerHTML = items.map(item => {
-        const execId = item.executionPublicId || item.publicId || '';
+        // Backend yanıtında executionPublicId, publicId ve execution_public_id gibi varyasyonları kontrol et
+        const execId = item.executionPublicId
+            || item.publicId
+            || item.execution_public_id
+            || item.id
+            || '';
+
+        // Debug: Eğer execId boşsa, konsola log et
+        if (!execId) {
+            console.warn('Execution ID bulunamadı, item:', item);
+        }
+
         return `
-            <tr style="cursor:pointer" data-id="${Utils.escHtml(execId)}">
+            <tr style="cursor:pointer" data-id="${Utils.escHtml(execId)}" title="${execId ? '' : 'ID bulunamadı'}">
                 <td>${Utils.escHtml(item.scenarioName ?? '—')}</td>
                 <td>${statusBadge(item.status)}</td>
                 <td>${Utils.formatDuration(item.durationMs)}</td>
@@ -162,9 +173,19 @@ function renderTable(items) {
 
     // Satır tıklama → execution detay
     tbody.querySelectorAll('tr[data-id]').forEach(row => {
-        row.addEventListener('click', () => {
-            window.location.href = `execution-detail.html?id=${row.dataset.id}`;
-        });
+        if (!row.dataset.id) {
+            // Eğer ID boşsa tıklamayı engelle
+            row.style.cursor = 'default';
+            row.style.opacity = '0.5';
+            row.addEventListener('click', (e) => {
+                e.preventDefault();
+                Toast.error('Çalıştırma ID\'si bulunamadı. Sayfayı yenileyin.');
+            });
+        } else {
+            row.addEventListener('click', () => {
+                window.location.href = `execution-detail.html?id=${encodeURIComponent(row.dataset.id)}`;
+            });
+        }
     });
 }
 

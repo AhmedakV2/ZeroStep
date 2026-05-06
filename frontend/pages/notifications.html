@@ -1,10 +1,558 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroStep — Bildirimler</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/layout.css">
+    <style>
+        /* ── Bildirim Listesi ─────────────────────────────────── */
+        .notif-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .notif-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--clr-border);
+            cursor: pointer;
+            transition: background var(--transition);
+            position: relative;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .notif-item:last-child { border-bottom: none; }
+
+        .notif-item:hover { background: var(--clr-surface-2); }
+
+        /* Okunmamış bildirim */
+        .notif-item.unread {
+            background: rgba(61, 122, 237, .04);
+        }
+        .notif-item.unread::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--clr-primary);
+            border-radius: 0 2px 2px 0;
+        }
+
+        .notif-icon {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+            margin-top: .1rem;
+        }
+
+        .notif-icon-completed { background: rgba(46,184,126,.15); color: var(--clr-success); }
+        .notif-icon-failed    { background: rgba(224,82,96,.15);  color: var(--clr-danger); }
+        .notif-icon-announce  { background: rgba(61,122,237,.15); color: var(--clr-primary); }
+        .notif-icon-message   { background: rgba(61,122,237,.12); color: var(--clr-primary-h); }
+        .notif-icon-schedule  { background: rgba(224,144,64,.15); color: var(--clr-warning); }
+        .notif-icon-share     { background: rgba(46,184,126,.12); color: var(--clr-success); }
+
+        .notif-content { flex: 1; min-width: 0; }
+
+        .notif-title {
+            font-size: .88rem;
+            font-weight: 600;
+            color: var(--clr-text);
+            margin-bottom: .18rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .notif-item.unread .notif-title { font-weight: 700; }
+
+        .notif-message {
+            font-size: .8rem;
+            color: var(--clr-text-muted);
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .notif-meta {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            margin-top: .35rem;
+        }
+
+        .notif-time {
+            font-size: .72rem;
+            color: var(--clr-text-muted);
+            font-family: var(--font-ui);
+        }
+
+        .notif-actions {
+            display: flex;
+            align-items: center;
+            gap: .25rem;
+            flex-shrink: 0;
+            opacity: 0;
+            transition: opacity var(--transition);
+        }
+
+        .notif-item:hover .notif-actions { opacity: 1; }
+
+        .notif-action-btn {
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: var(--radius-sm);
+            border: none;
+            background: transparent;
+            color: var(--clr-text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .75rem;
+            transition: all var(--transition);
+        }
+
+        .notif-action-btn:hover {
+            background: var(--clr-surface-2);
+            color: var(--clr-text);
+        }
+
+        .notif-action-btn.danger:hover {
+            background: rgba(224,82,96,.12);
+            color: var(--clr-danger);
+        }
+
+        /* ── Filtre Sekmeler ──────────────────────────────────── */
+        .filter-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--clr-border);
+            margin-bottom: 0;
+        }
+
+        .filter-tab {
+            padding: .7rem 1.25rem;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--clr-text-muted);
+            font-size: .85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+            margin-bottom: -1px;
+            font-family: var(--font-body);
+        }
+
+        .filter-tab:hover { color: var(--clr-text); }
+
+        .filter-tab.active {
+            color: var(--clr-primary);
+            border-bottom-color: var(--clr-primary);
+        }
+
+        /* ── Arama Kutusu (YENİ EKLENDİ) ─────────────────────── */
+        .search-input {
+            padding: .5rem .85rem;
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-md);
+            background: var(--clr-surface);
+            color: var(--clr-text);
+            font-size: .85rem;
+            font-family: var(--font-body);
+            width: 260px;
+            outline: none;
+            transition: border-color var(--transition);
+        }
+
+        .search-input:focus {
+            border-color: var(--clr-primary);
+        }
+
+        /* ── Tercihler Modal İçeriği ──────────────────────────── */
+        .pref-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .75rem 0;
+            border-bottom: 1px solid var(--clr-border);
+        }
+
+        .pref-row:last-child { border-bottom: none; }
+
+        .pref-label {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            font-size: .88rem;
+            color: var(--clr-text);
+        }
+
+        .pref-icon {
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .85rem;
+            flex-shrink: 0;
+        }
+
+        .pref-channels {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+
+        .channel-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: .25rem;
+            padding: .2rem .55rem;
+            border-radius: 99px;
+            font-size: .7rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid var(--clr-border);
+            background: transparent;
+            color: var(--clr-text-muted);
+            transition: all var(--transition);
+            font-family: var(--font-body);
+        }
+
+        .channel-chip.active {
+            background: rgba(61,122,237,.15);
+            border-color: var(--clr-primary);
+            color: var(--clr-primary-h);
+        }
+
+        /* Toggle switch */
+        .pref-toggle { display: flex; align-items: center; gap: .75rem; }
+
+        .notif-toggle-switch {
+            position: relative;
+            width: 36px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .notif-toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .notif-toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: var(--clr-border);
+            border-radius: 99px;
+            cursor: pointer;
+            transition: background .2s;
+        }
+
+        .notif-toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform .2s;
+        }
+
+        .notif-toggle-switch input:checked + .notif-toggle-slider { background: var(--clr-primary); }
+        .notif-toggle-switch input:checked + .notif-toggle-slider::before { transform: translateX(16px); }
+
+        /* ── Bildirim Toast ───────────────────────────────────── */
+        .live-notif-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            padding: .15rem .5rem;
+            background: rgba(61,122,237,.12);
+            border: 1px solid rgba(61,122,237,.25);
+            border-radius: 99px;
+            font-size: .7rem;
+            color: var(--clr-primary-h);
+            font-weight: 700;
+        }
+
+        .ws-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--clr-success);
+            animation: ws-pulse 2s ease infinite;
+        }
+
+        @keyframes ws-pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: .35; }
+        }
+
+        .ws-dot.disconnected { background: var(--clr-text-muted); animation: none; }
+
+        /* ── Empty state özeli ────────────────────────────────── */
+        .notif-empty {
+            padding: 4rem 2rem;
+            text-align: center;
+            color: var(--clr-text-muted);
+        }
+
+        .notif-empty-icon {
+            font-size: 3rem;
+            opacity: .15;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .notif-empty-title {
+            font-size: .95rem;
+            font-weight: 600;
+            color: var(--clr-text);
+            margin-bottom: .35rem;
+        }
+
+        /* ── Loading skeleton ─────────────────────────────────── */
+        .skeleton {
+            background: linear-gradient(90deg,
+            var(--clr-surface-2) 25%,
+            rgba(255,255,255,.04) 50%,
+            var(--clr-surface-2) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: var(--radius-sm);
+        }
+
+        @keyframes shimmer {
+            0%   { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-notif {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--clr-border);
+        }
+
+        .skeleton-circle { width: 2.25rem; height: 2.25rem; border-radius: 50%; flex-shrink: 0; }
+        .skeleton-lines  { flex: 1; display: flex; flex-direction: column; gap: .4rem; padding-top: .2rem; }
+        .skeleton-line   { height: .75rem; border-radius: 3px; }
+
+        /* ── Header summary kartları ──────────────────────────── */
+        .summary-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-card {
+            background: var(--clr-surface);
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: .875rem;
+        }
+
+        .summary-icon {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .summary-info { display: flex; flex-direction: column; gap: .15rem; }
+
+        .summary-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--clr-text);
+            line-height: 1;
+        }
+
+        .summary-label {
+            font-size: .72rem;
+            color: var(--clr-text-muted);
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .summary-bar { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 600px) {
+            .search-input { width: 100%; }
+        }
+
+        @media (max-width: 480px) {
+            .summary-bar { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
+<div id="toast-container"></div>
 
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <header class="topbar" id="topbar"></header>
+
+    <main class="main-content">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-header-left">
+                <h2 class="page-title">Bildirimler</h2>
+                <p class="page-subtitle">Gerçek zamanlı sistem bildirimleri</p>
+            </div>
+            <div style="display:flex;gap:.5rem;align-items:center;">
+                <!-- WebSocket durum göstergesi -->
+                <div class="live-notif-badge" id="ws-status-badge">
+                    <span class="ws-dot disconnected" id="ws-dot"></span>
+                    <span id="ws-label">Bağlanıyor...</span>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="btn-prefs">Tercihler</button>
+                <button class="btn btn-ghost btn-sm" id="btn-read-all">Tümünü Okundu İşaretle</button>
+            </div>
+        </div>
+
+        <!-- Özet Kartlar -->
+        <div class="summary-bar" id="summary-bar">
+            <div class="summary-card">
+                <div class="summary-icon" style="background:rgba(61,122,237,.12);color:var(--clr-primary);">◉</div>
+                <div class="summary-info">
+                    <span class="summary-value" id="sum-total">—</span>
+                    <span class="summary-label">Toplam</span>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-icon" style="background:rgba(224,82,96,.12);color:var(--clr-danger);">◎</div>
+                <div class="summary-info">
+                    <span class="summary-value" id="sum-unread">—</span>
+                    <span class="summary-label">Okunmamış</span>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-icon" style="background:rgba(46,184,126,.12);color:var(--clr-success);">✓</div>
+                <div class="summary-info">
+                    <span class="summary-value" id="sum-completed">—</span>
+                    <span class="summary-label">Tamamlandı</span>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-icon" style="background:rgba(224,82,96,.12);color:var(--clr-danger);">✗</div>
+                <div class="summary-info">
+                    <span class="summary-value" id="sum-failed">—</span>
+                    <span class="summary-label">Başarısız</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ana İçerik -->
+        <div class="card" style="padding:0;overflow:hidden;">
+
+            <!-- Filtre + Arama -->
+            <div style="padding:.875rem 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--clr-border);flex-wrap:wrap;">
+                <div class="filter-tabs" style="border-bottom:none;margin:0;">
+                    <button type="button" class="filter-tab active" data-filter="all">Tümü</button>
+                    <button type="button" class="filter-tab" data-filter="unread">Okunmamış</button>
+                    <button type="button" class="filter-tab" data-filter="EXECUTION_COMPLETED">Tamamlandı</button>
+                    <button type="button" class="filter-tab" data-filter="EXECUTION_FAILED">Başarısız</button>
+                    <button type="button" class="filter-tab" data-filter="ADMIN_ANNOUNCEMENT">Duyurular</button>
+                    <button type="button" class="filter-tab" data-filter="NEW_MESSAGE">Mesajlar</button>
+                </div>
+                <!-- EKSİK OLAN ARAMA KUTUSU EKLENDİ -->
+                <div class="search-box">
+                    <input type="text" id="notif-search" class="search-input" placeholder="Bildirimlerde ara...">
+                </div>
+            </div>
+
+            <!-- Bildirim Listesi -->
+            <div id="notif-list">
+                <!-- JS ile doldurulur -->
+                <div id="notif-skeleton">
+                    <!-- Skeleton loader x5 -->
+                    <div class="skeleton-notif">
+                        <div class="skeleton skeleton-circle"></div>
+                        <div class="skeleton-lines">
+                            <div class="skeleton skeleton-line" style="width:55%"></div>
+                            <div class="skeleton skeleton-line" style="width:85%"></div>
+                            <div class="skeleton skeleton-line" style="width:35%"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-notif">
+                        <div class="skeleton skeleton-circle"></div>
+                        <div class="skeleton-lines">
+                            <div class="skeleton skeleton-line" style="width:55%"></div>
+                            <div class="skeleton skeleton-line" style="width:85%"></div>
+                            <div class="skeleton skeleton-line" style="width:35%"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-notif">
+                        <div class="skeleton skeleton-circle"></div>
+                        <div class="skeleton-lines">
+                            <div class="skeleton skeleton-line" style="width:55%"></div>
+                            <div class="skeleton skeleton-line" style="width:85%"></div>
+                            <div class="skeleton skeleton-line" style="width:35%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div id="pagination-container" style="padding:1rem 1.25rem;border-top:1px solid var(--clr-border);"></div>
+
+        </div>
+
+    </main>
+</div>
+
+<!-- SockJS + STOMP CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<script src="../assets/js/utils.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/toast.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/router.js"></script>
+<script src="../js/components/sidebar.js"></script>
+<script src="../js/components/topbar.js"></script>
+<script src="../js/components/pagination.js"></script>
+<script src="../js/components/modal.js"></script>
+<script src="../js/pages/notifications.js"></script>
 </body>
 </html>

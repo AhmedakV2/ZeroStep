@@ -21,6 +21,10 @@ let lastLogId     = 0;          // polling için son görülen log ID'si
     const params = new URLSearchParams(window.location.search);
     execPublicId = params.get('id');
 
+    // Debug: URL parametresini kontrol et
+    console.log('[execution-detail] URL:', window.location.href);
+    console.log('[execution-detail] Extracted execPublicId:', execPublicId);
+
     if (!execPublicId) {
         Toast.error('Execution ID bulunamadı. URL parametresi eksik.');
         return;
@@ -52,7 +56,10 @@ let lastLogId     = 0;          // polling için son görülen log ID'si
 // ─── Execution Ana Verisi ──────────────────────────────────
 async function loadExecution() {
     try {
+        console.log('[execution-detail] Fetching execution:', execPublicId);
         const raw = await Api.get(`/executions/${execPublicId}`);
+        console.log('[execution-detail] API Response:', raw);
+        
         // api.js .data'yı unwrap ediyor; publicId varlığıyla kontrol et
         execData = (raw?.publicId) ? raw : (raw?.data ?? raw);
 
@@ -60,6 +67,7 @@ async function loadExecution() {
             throw new Error('Geçersiz execution verisi: publicId yok');
         }
 
+        console.log('[execution-detail] Parsed execData:', execData);
         renderHeader();
         renderSummary();
     } catch (err) {

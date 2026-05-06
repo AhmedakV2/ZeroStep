@@ -93,9 +93,12 @@ async function loadRecentExecutions() {
 
         tbody.innerHTML = items.map(exec => {
             // ReportListItemDto field isimleri: executionPublicId, scenarioName, status, durationMs, startedAt, passedSteps, totalSteps
-            const execId = exec.executionPublicId || exec.publicId || '';
+            const execId = exec.executionPublicId || exec.publicId || exec.id || '';
+            if (!execId) {
+                console.warn('[dashboard] Execution ID bulunamadı, exec:', exec);
+            }
             return `
-                <tr style="cursor:pointer" data-id="${Utils.escHtml(execId)}">
+                <tr style="cursor:pointer;${!execId ? 'opacity:0.5' : ''}" data-id="${Utils.escHtml(execId)}">
                     <td>${Utils.escHtml(exec.scenarioName ?? '—')}</td>
                     <td>${statusBadge(exec.status)}</td>
                     <td>${Utils.formatDuration(exec.durationMs)}</td>
@@ -106,9 +109,17 @@ async function loadRecentExecutions() {
 
         // Satır tıklama → execution detay
         tbody.querySelectorAll('tr[data-id]').forEach(row => {
-            row.addEventListener('click', () => {
-                window.location.href = `execution-detail.html?id=${row.dataset.id}`;
-            });
+            if (!row.dataset.id) {
+                row.style.cursor = 'default';
+                row.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    Toast.error('Çalıştırma ID\'si bulunamadı. Sayfayı yenileyin.');
+                });
+            } else {
+                row.addEventListener('click', () => {
+                    window.location.href = `execution-detail.html?id=${encodeURIComponent(row.dataset.id)}`;
+                });
+            }
         });
 
     } catch (err) {

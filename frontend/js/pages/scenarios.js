@@ -154,7 +154,11 @@ window.toggleActionsMenu = (btn) => {
 
 // ═══════════════════════════════════════════════════════════ DETAIL
 window.openScenarioDetail = (publicId) => {
-    window.location.href = 'scenario-detail.html?id=' + publicId;
+    if (!publicId || publicId.trim() === '') {
+        Toast.error('Senaryo ID bulunamadı');
+        return;
+    }
+    window.location.href = 'scenario-detail.html?id=' + encodeURIComponent(publicId);
 };
 
 // ═══════════════════════════════════════════════════════════ EDIT/CREATE
