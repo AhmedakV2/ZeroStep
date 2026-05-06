@@ -1,10 +1,487 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroStep — Duyurular</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/layout.css">
+    <style>
+        /* ── Duyuru Kartı ─────────────────────────────────── */
+        .ann-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .ann-card {
+            background: var(--clr-surface);
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-md);
+            padding: 1.25rem 1.5rem;
+            position: relative;
+            animation: annIn .22s ease;
+        }
+
+        @keyframes annIn {
+            from { opacity: 0; transform: translateY(8px); }
+        }
+
+        /* Severity sol şerit */
+        .ann-card[data-severity="INFO"]     { border-left: 4px solid var(--clr-primary); }
+        .ann-card[data-severity="WARNING"]  { border-left: 4px solid var(--clr-warning); }
+        .ann-card[data-severity="CRITICAL"] { border-left: 4px solid var(--clr-danger); }
+
+        .ann-header {
+            display: flex;
+            align-items: flex-start;
+            gap: .875rem;
+            margin-bottom: .625rem;
+        }
+
+        .ann-icon {
+            width: 2rem;
+            height: 2rem;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .ann-icon-INFO     { background: rgba(61,122,237,.15); color: var(--clr-primary); }
+        .ann-icon-WARNING  { background: rgba(224,144,64,.15); color: var(--clr-warning); }
+        .ann-icon-CRITICAL { background: rgba(224,82,96,.15);  color: var(--clr-danger); }
+
+        .ann-title {
+            font-size: .95rem;
+            font-weight: 700;
+            color: var(--clr-text);
+            flex: 1;
+            line-height: 1.4;
+        }
+
+        .ann-body {
+            font-size: .875rem;
+            color: var(--clr-text-muted);
+            line-height: 1.65;
+            margin-left: 2.875rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .ann-footer {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: .875rem;
+            margin-left: 2.875rem;
+        }
+
+        .ann-meta {
+            font-size: .72rem;
+            color: var(--clr-text-muted);
+            font-family: var(--font-ui);
+        }
+
+        .ann-dismiss-btn {
+            position: absolute;
+            top: .875rem;
+            right: .875rem;
+            background: transparent;
+            border: none;
+            color: var(--clr-text-muted);
+            cursor: pointer;
+            font-size: .85rem;
+            padding: .2rem .4rem;
+            border-radius: var(--radius-sm);
+            transition: background var(--transition), color var(--transition);
+            line-height: 1;
+        }
+
+        .ann-dismiss-btn:hover {
+            background: var(--clr-surface-2);
+            color: var(--clr-text);
+        }
+
+        /* Kart kapanma animasyonu */
+        .ann-card.dismissing {
+            animation: annOut .2s ease forwards;
+        }
+
+        @keyframes annOut {
+            to { opacity: 0; transform: translateX(24px); max-height: 0; padding: 0; margin: 0; overflow: hidden; }
+        }
+
+        /* Boş durum */
+        .ann-empty {
+            padding: 4rem 2rem;
+            text-align: center;
+            color: var(--clr-text-muted);
+        }
+
+        .ann-empty-icon {
+            font-size: 3rem;
+            opacity: .12;
+            display: block;
+            margin-bottom: 1rem;
+        }
+
+        .ann-empty-title {
+            font-size: .95rem;
+            font-weight: 600;
+            color: var(--clr-text);
+            margin-bottom: .35rem;
+        }
+
+        /* ── Admin Panel ───────────────────────────────────── */
+        .admin-section {
+            margin-top: 2rem;
+        }
+
+        /* Admin tablo satır aksiyon butonu */
+        .admin-ann-actions {
+            display: flex;
+            gap: .25rem;
+        }
+
+        /* Hedef badge */
+        .target-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            padding: .15rem .55rem;
+            border-radius: 99px;
+            font-size: .72rem;
+            font-weight: 700;
+            font-family: var(--font-ui);
+        }
+
+        .target-ALL    { background: rgba(61,122,237,.12); color: var(--clr-primary-h); }
+        .target-ROLE   { background: rgba(46,184,126,.12); color: var(--clr-success); }
+        .target-USERS  { background: rgba(224,144,64,.12); color: var(--clr-warning); }
+
+        /* Severity badge */
+        .severity-INFO     { background: rgba(61,122,237,.12); color: var(--clr-primary-h); }
+        .severity-WARNING  { background: rgba(224,144,64,.12); color: var(--clr-warning); }
+        .severity-CRITICAL { background: rgba(224,82,96,.12); color: var(--clr-danger); }
+
+        /* Yayın durumu */
+        .published-dot {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            margin-right: .3rem;
+            vertical-align: middle;
+        }
+
+        .published-dot.yes { background: var(--clr-success); }
+        .published-dot.no  { background: var(--clr-text-muted); }
+
+        /* ── Modal: Hedef seçim ────────────────────────────── */
+        .target-radio-group {
+            display: flex;
+            gap: .75rem;
+            flex-wrap: wrap;
+            margin-bottom: .75rem;
+        }
+
+        .target-radio-card {
+            flex: 1;
+            min-width: 100px;
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-sm);
+            padding: .6rem .75rem;
+            cursor: pointer;
+            transition: all var(--transition);
+            text-align: center;
+            user-select: none;
+        }
+
+        .target-radio-card:has(input:checked) {
+            border-color: var(--clr-primary);
+            background: rgba(61,122,237,.08);
+        }
+
+        .target-radio-card input { display: none; }
+        .target-radio-card .trc-label { font-size: .82rem; font-weight: 600; color: var(--clr-text); }
+        .target-radio-card .trc-desc  { font-size: .7rem; color: var(--clr-text-muted); margin-top: .1rem; }
+
+        /* Kullanıcı arama sonuçları */
+        .user-search-chip-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .35rem;
+            min-height: 2rem;
+            margin-top: .5rem;
+        }
+
+        .user-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            background: rgba(61,122,237,.12);
+            border: 1px solid rgba(61,122,237,.25);
+            border-radius: 99px;
+            padding: .15rem .55rem;
+            font-size: .75rem;
+            color: var(--clr-primary-h);
+        }
+
+        .user-chip button {
+            background: none;
+            border: none;
+            color: currentColor;
+            cursor: pointer;
+            padding: 0;
+            font-size: .8rem;
+            line-height: 1;
+            opacity: .7;
+        }
+
+        .user-chip button:hover { opacity: 1; }
+
+        /* Rol checkbox listesi */
+        .role-check-list {
+            display: flex;
+            flex-direction: column;
+            gap: .4rem;
+            margin-top: .5rem;
+        }
+
+        .role-check-item {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            padding: .4rem .625rem;
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: background var(--transition);
+            font-size: .85rem;
+            color: var(--clr-text);
+        }
+
+        .role-check-item:hover { background: var(--clr-surface-2); }
+        .role-check-item input { accent-color: var(--clr-primary); }
+
+        /* Severity radio group */
+        .severity-radio-group {
+            display: flex;
+            gap: .5rem;
+        }
+
+        .sev-option {
+            flex: 1;
+            text-align: center;
+            padding: .5rem;
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: .8rem;
+            font-weight: 600;
+            transition: all var(--transition);
+            user-select: none;
+        }
+
+        .sev-option input { display: none; }
+        .sev-INFO     { }
+        .sev-WARNING  { }
+        .sev-CRITICAL { }
+
+        .sev-option:has(input:checked).sev-INFO     { border-color: var(--clr-primary); background: rgba(61,122,237,.12); color: var(--clr-primary-h); }
+        .sev-option:has(input:checked).sev-WARNING  { border-color: var(--clr-warning); background: rgba(224,144,64,.12); color: var(--clr-warning); }
+        .sev-option:has(input:checked).sev-CRITICAL { border-color: var(--clr-danger);  background: rgba(224,82,96,.12);  color: var(--clr-danger); }
+
+        /* Kullanıcı arama açılır listesi */
+        .user-search-results {
+            max-height: 160px;
+            overflow-y: auto;
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-sm);
+            margin-top: .35rem;
+        }
+
+        .user-result-row {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            padding: .5rem .75rem;
+            cursor: pointer;
+            transition: background var(--transition);
+            font-size: .82rem;
+            border-bottom: 1px solid var(--clr-border);
+        }
+
+        .user-result-row:last-child { border-bottom: none; }
+        .user-result-row:hover { background: var(--clr-surface-2); }
+
+        .user-result-av {
+            width: 1.6rem;
+            height: 1.6rem;
+            border-radius: 50%;
+            background: var(--clr-primary);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .62rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* Sekme navigasyon */
+        .ann-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--clr-border);
+            margin-bottom: 1.5rem;
+        }
+
+        .ann-tab {
+            padding: .65rem 1.25rem;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--clr-text-muted);
+            font-size: .875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+            margin-bottom: -1px;
+            font-family: var(--font-body);
+        }
+
+        .ann-tab:hover { color: var(--clr-text); }
+        .ann-tab.active { color: var(--clr-primary); border-bottom-color: var(--clr-primary); }
+
+        .ann-tab-panel { display: none; }
+        .ann-tab-panel.active { display: block; }
+
+        /* Loading skeleton */
+        .ann-skeleton {
+            height: 90px;
+            background: linear-gradient(90deg,
+            var(--clr-surface-2) 25%,
+            rgba(255,255,255,.03) 50%,
+            var(--clr-surface-2) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: var(--radius-md);
+        }
+
+        @keyframes shimmer {
+            0%   { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Yayınla butonu özel renk */
+        .btn-publish {
+            background: var(--clr-success);
+            color: #fff;
+        }
+
+        .btn-publish:hover:not(:disabled) {
+            background: #259b6b;
+        }
+    </style>
 </head>
 <body>
+<div id="toast-container"></div>
 
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <header class="topbar" id="topbar"></header>
+
+    <main class="main-content">
+        <!-- Sayfa başlığı -->
+        <div class="page-header">
+            <div class="page-header-left">
+                <h2 class="page-title">Duyurular</h2>
+                <p class="page-subtitle" id="ann-subtitle">Sistem bildirimleri ve duyuruları</p>
+            </div>
+            <!-- Admin için yeni duyuru butonu -->
+            <button class="btn btn-primary hidden" id="btn-new-ann">+ Yeni Duyuru</button>
+        </div>
+
+        <!-- Sekme navigasyonu (sadece admin görür) -->
+        <div class="ann-tabs hidden" id="ann-tabs">
+            <button class="ann-tab active" data-tab="user">Benim Duyurularım</button>
+            <button class="ann-tab" data-tab="admin">Yönetim Paneli</button>
+        </div>
+
+        <!-- Kullanıcı Duyuruları Sekmesi -->
+        <div class="ann-tab-panel active" id="tab-user">
+            <div id="ann-list-container">
+                <!-- Skeleton -->
+                <div class="ann-list" id="ann-skeleton">
+                    <div class="ann-skeleton"></div>
+                    <div class="ann-skeleton"></div>
+                    <div class="ann-skeleton"></div>
+                </div>
+                <!-- Gerçek liste -->
+                <div class="ann-list hidden" id="ann-list"></div>
+                <!-- Boş durum -->
+                <div class="ann-empty hidden" id="ann-empty">
+                    <span class="ann-empty-icon">◎</span>
+                    <div class="ann-empty-title">Aktif duyuru yok</div>
+                    <p style="font-size:.85rem;">Tüm duyuruları kapattınız veya henüz yayınlanan duyuru bulunmuyor.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Yönetim Sekmesi -->
+        <div class="ann-tab-panel" id="tab-admin">
+            <div class="filter-bar" style="justify-content:flex-end;">
+                <button class="btn btn-primary" id="btn-new-ann-admin">+ Yeni Duyuru</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Başlık</th>
+                        <th>Şiddet</th>
+                        <th>Hedef</th>
+                        <th>Durum</th>
+                        <th>Oluşturulma</th>
+                        <th>İşlemler</th>
+                    </tr>
+                    </thead>
+                    <tbody id="admin-ann-tbody">
+                    <tr><td colspan="6">
+                        <div class="empty-state">
+                            <span class="empty-state-msg" style="color:var(--clr-text-muted)">Yükleniyor...</span>
+                        </div>
+                    </td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="admin-pagination"></div>
+        </div>
+    </main>
+</div>
+
+<!-- SockJS + STOMP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<script src="../assets/js/utils.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/toast.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/router.js"></script>
+<script src="../js/components/sidebar.js"></script>
+<script src="../js/components/topbar.js"></script>
+<script src="../js/components/modal.js"></script>
+<script src="../js/components/confirm-dialog.js"></script>
+<script src="../js/components/pagination.js"></script>
+<script src="../js/pages/announcements.js"></script>
 </body>
 </html>
