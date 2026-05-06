@@ -1,10 +1,502 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroStep — Ayarlar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/layout.css">
+    <style>
+        /* ── Light theme overrides ────────────────────────────── */
+        body.theme-light {
+            --clr-bg:          #f0f2f7;
+            --clr-surface:     #ffffff;
+            --clr-surface-2:   #f0f2f7;
+            --clr-border:      #d8dce8;
+            --clr-border-focus:#3d7aed;
+            --clr-text:        #1a1f2e;
+            --clr-text-muted:  #6b7592;
+        }
+
+        /* ── Settings Layout ───────────────────────────────────── */
+        .settings-shell {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            gap: 1.5rem;
+            max-width: 900px;
+        }
+
+        /* ── Tab Nav ──────────────────────────────────────────── */
+        .settings-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .settings-tab {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            padding: .6rem .875rem;
+            border-radius: var(--radius-sm);
+            color: var(--clr-text-muted);
+            font-size: .875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+            transition: background var(--transition), color var(--transition);
+            font-family: var(--font-body);
+        }
+
+        .settings-tab:hover { background: var(--clr-surface-2); color: var(--clr-text); }
+        .settings-tab.active {
+            background: rgba(61,122,237,.12);
+            color: var(--clr-primary);
+            font-weight: 600;
+        }
+
+        .tab-icon { font-size: 1rem; width: 1.1rem; text-align: center; flex-shrink: 0; }
+
+        /* ── Panels ───────────────────────────────────────────── */
+        .settings-panel { display: none; }
+        .settings-panel.active { display: block; }
+
+        .settings-section {
+            background: var(--clr-surface);
+            border: 1px solid var(--clr-border);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .settings-section-title {
+            font-size: .82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--clr-text-muted);
+            margin-bottom: 1.25rem;
+            padding-bottom: .625rem;
+            border-bottom: 1px solid var(--clr-border);
+        }
+
+        /* ── Profile Card ─────────────────────────────────────── */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .profile-avatar-lg {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            background: var(--clr-primary);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .profile-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--clr-text);
+        }
+
+        .profile-meta {
+            font-size: .8rem;
+            color: var(--clr-text-muted);
+            margin-top: .15rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .875rem;
+        }
+
+        .info-item { display: flex; flex-direction: column; gap: .2rem; }
+
+        .info-label {
+            font-size: .68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--clr-text-muted);
+        }
+
+        .info-value {
+            font-size: .88rem;
+            color: var(--clr-text);
+            font-family: var(--font-ui);
+        }
+
+        /* ── Notification Prefs ───────────────────────────────── */
+        .pref-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .875rem 0;
+            border-bottom: 1px solid var(--clr-border);
+            gap: 1rem;
+        }
+
+        .pref-row:last-child { border-bottom: none; }
+
+        .pref-info {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            font-size: .88rem;
+            color: var(--clr-text);
+        }
+
+        .pref-icon {
+            width: 1.75rem;
+            height: 1.75rem;
+            background: rgba(61,122,237,.12);
+            color: var(--clr-primary-h);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .85rem;
+            flex-shrink: 0;
+        }
+
+        .pref-controls {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            flex-shrink: 0;
+        }
+
+        /* Channel chip */
+        .channel-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: .25rem;
+            padding: .2rem .55rem;
+            border-radius: 99px;
+            font-size: .72rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--clr-border);
+            background: transparent;
+            color: var(--clr-text-muted);
+            transition: all var(--transition);
+            user-select: none;
+        }
+
+        .channel-chip input { display: none; }
+
+        .channel-chip.active {
+            background: rgba(61,122,237,.15);
+            border-color: var(--clr-primary);
+            color: var(--clr-primary-h);
+        }
+
+        /* Toggle switch */
+        .toggle-switch-wrap {
+            position: relative;
+            width: 36px;
+            height: 20px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch-wrap .pref-enabled {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+
+        .pref-toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: var(--clr-border);
+            border-radius: 99px;
+            transition: background .2s;
+        }
+
+        .pref-toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 14px; height: 14px;
+            left: 3px; bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform .2s;
+        }
+
+        .toggle-switch-wrap:has(.pref-enabled:checked) .pref-toggle-slider { background: var(--clr-primary); }
+        .toggle-switch-wrap:has(.pref-enabled:checked) .pref-toggle-slider::before { transform: translateX(16px); }
+
+        /* ── Theme Cards ──────────────────────────────────────── */
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .theme-card {
+            border: 2px solid var(--clr-border);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all var(--transition);
+            position: relative;
+        }
+
+        .theme-card:hover { border-color: var(--clr-primary); }
+
+        .theme-card.selected {
+            border-color: var(--clr-primary);
+            background: rgba(61,122,237,.07);
+        }
+
+        .theme-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: .625rem;
+            right: .75rem;
+            width: 1.25rem;
+            height: 1.25rem;
+            background: var(--clr-primary);
+            color: #fff;
+            border-radius: 50%;
+            font-size: .7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-preview {
+            height: 72px;
+            border-radius: var(--radius-sm);
+            margin-bottom: .75rem;
+            border: 1px solid var(--clr-border);
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* Koyu tema önizleme */
+        .preview-dark { background: #0d0f14; }
+        .preview-dark .preview-sidebar { width: 30%; background: #161b25; border-right: 1px solid #2a3347; }
+        .preview-dark .preview-main { flex: 1; padding: .5rem; display: flex; flex-direction: column; gap: .25rem; }
+        .preview-dark .preview-bar { height: 6px; background: #2a3347; border-radius: 2px; }
+        .preview-dark .preview-bar.accent { background: #3d7aed; width: 60%; }
+
+        /* Açık tema önizleme */
+        .preview-light { background: #f0f2f7; }
+        .preview-light .preview-sidebar { width: 30%; background: #fff; border-right: 1px solid #d8dce8; }
+        .preview-light .preview-main { flex: 1; padding: .5rem; display: flex; flex-direction: column; gap: .25rem; }
+        .preview-light .preview-bar { height: 6px; background: #d8dce8; border-radius: 2px; }
+        .preview-light .preview-bar.accent { background: #3d7aed; width: 60%; }
+
+        .theme-name {
+            font-size: .88rem;
+            font-weight: 600;
+            color: var(--clr-text);
+        }
+
+        .theme-desc {
+            font-size: .75rem;
+            color: var(--clr-text-muted);
+            margin-top: .15rem;
+        }
+
+        /* ── Responsive ───────────────────────────────────────── */
+        @media (max-width: 700px) {
+            .settings-shell { grid-template-columns: 1fr; }
+            .settings-nav { flex-direction: row; overflow-x: auto; }
+            .settings-tab { white-space: nowrap; }
+            .info-grid { grid-template-columns: 1fr; }
+            .theme-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
+<div id="toast-container"></div>
 
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <header class="topbar" id="topbar"></header>
+
+    <main class="main-content">
+        <div class="page-header">
+            <div class="page-header-left">
+                <h2 class="page-title">Ayarlar</h2>
+                <p class="page-subtitle">Profil, bildirimler ve görünüm tercihleriniz</p>
+            </div>
+        </div>
+
+        <div class="settings-shell">
+            <!-- Sol: Tab Navigasyon -->
+            <nav class="settings-nav">
+                <button class="settings-tab active" data-tab="profile">
+                    <span class="tab-icon">◉</span> Profil
+                </button>
+                <button class="settings-tab" data-tab="notifications">
+                    <span class="tab-icon">◈</span> Bildirimler
+                </button>
+                <button class="settings-tab" data-tab="appearance">
+                    <span class="tab-icon">◑</span> Görünüm
+                </button>
+            </nav>
+
+            <!-- Sağ: Panel İçerikleri -->
+            <div class="settings-content">
+
+                <!-- ── Profil Paneli ───────────────────────────── -->
+                <div class="settings-panel active" id="panel-profile">
+                    <div class="settings-section">
+                        <div class="settings-section-title">Hesap Bilgileri</div>
+                        <div class="profile-header">
+                            <div class="profile-avatar-lg" id="prof-avatar">??</div>
+                            <div>
+                                <div class="profile-name" id="prof-username">Yükleniyor...</div>
+                                <div class="profile-meta" id="prof-email">—</div>
+                            </div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Görünen Ad</span>
+                                <span class="info-value" id="prof-display">—</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Roller</span>
+                                <span class="info-value" id="prof-roles">—</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Kayıt Tarihi</span>
+                                <span class="info-value" id="prof-created">—</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Son Giriş</span>
+                                <span class="info-value" id="prof-lastlogin">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <div class="settings-section-title">Güvenlik</div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;">
+                            <div>
+                                <div style="font-size:.88rem;font-weight:600;color:var(--clr-text);">Şifre</div>
+                                <div style="font-size:.78rem;color:var(--clr-text-muted);margin-top:.15rem;">
+                                    Son değişiklik bilgisi saklanmamaktadır.
+                                </div>
+                            </div>
+                            <button class="btn btn-ghost btn-sm" id="btn-change-password">
+                                Şifre Değiştir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Bildirim Tercihleri Paneli ─────────────── -->
+                <div class="settings-panel" id="panel-notifications">
+                    <div class="settings-section">
+                        <div class="settings-section-title">Bildirim Kanalları</div>
+                        <p style="font-size:.82rem;color:var(--clr-text-muted);margin-bottom:1.25rem;">
+                            Her bildirim türü için hangi kanallardan ve aktif olup olmayacağını belirleyin.
+                        </p>
+                        <div id="notif-prefs-list">
+                            <!-- JS ile doldurulur -->
+                            <div style="padding:1rem;color:var(--clr-text-muted);font-size:.85rem;">Yükleniyor...</div>
+                        </div>
+                        <div style="margin-top:1.25rem;display:flex;justify-content:flex-end;">
+                            <button class="btn btn-primary btn-sm" id="btn-save-notifs">Kaydet</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Görünüm Paneli ─────────────────────────── -->
+                <div class="settings-panel" id="panel-appearance">
+                    <div class="settings-section">
+                        <div class="settings-section-title">Tema</div>
+                        <div class="theme-grid">
+
+                            <!-- Koyu Tema -->
+                            <div class="theme-card" data-theme="dark">
+                                <div class="theme-preview preview-dark">
+                                    <div class="preview-sidebar"></div>
+                                    <div class="preview-main">
+                                        <div class="preview-bar accent"></div>
+                                        <div class="preview-bar" style="width:80%"></div>
+                                        <div class="preview-bar" style="width:50%"></div>
+                                    </div>
+                                </div>
+                                <div class="theme-name">Koyu</div>
+                                <div class="theme-desc">Varsayılan koyu arayüz</div>
+                            </div>
+
+                            <!-- Açık Tema -->
+                            <div class="theme-card" data-theme="light">
+                                <div class="theme-preview preview-light">
+                                    <div class="preview-sidebar"></div>
+                                    <div class="preview-main">
+                                        <div class="preview-bar accent"></div>
+                                        <div class="preview-bar" style="width:80%"></div>
+                                        <div class="preview-bar" style="width:50%"></div>
+                                    </div>
+                                </div>
+                                <div class="theme-name">Açık</div>
+                                <div class="theme-desc">Beyaz tabanlı aydınlık arayüz</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <div class="settings-section-title">Dil</div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;">
+                            <div>
+                                <div style="font-size:.88rem;font-weight:600;color:var(--clr-text);">Türkçe</div>
+                                <div style="font-size:.78rem;color:var(--clr-text-muted);margin-top:.15rem;">
+                                    Şu an için yalnızca Türkçe desteklenmektedir.
+                                </div>
+                            </div>
+                            <span class="badge badge-neutral">TR</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="../assets/js/utils.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/toast.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/router.js"></script>
+<script src="../js/components/sidebar.js"></script>
+<script src="../js/components/topbar.js"></script>
+<script src="../js/components/modal.js"></script>
+<script src="../js/components/confirm-dialog.js"></script>
+<script>
+    // Tema sayfaya gelmeden önce uygula (flash önlemi)
+    (function() {
+        const theme = localStorage.getItem('zs_theme') || 'dark';
+        if (theme === 'light') document.body.classList.add('theme-light');
+    })();
+</script>
+<script src="../js/pages/settings.js"></script>
 </body>
 </html>
