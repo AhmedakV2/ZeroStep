@@ -72,8 +72,10 @@ const ThemeManager = {
 
     apply(theme) {
         const t = theme || this.get();
-        // Eğer tema 'light' ise body etiketine 'theme-light' class'ı ekler.
-        document.body.classList.toggle('theme-light', t === 'light');
+        // Eğer tema 'light' ise body ve html etiketlerine 'theme-light' class'ı ekler.
+        const isLight = t === 'light';
+        document.body.classList.toggle('theme-light', isLight);
+        document.documentElement.classList.toggle('theme-light', isLight);
     }
 };
 

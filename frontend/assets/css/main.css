@@ -85,3 +85,16 @@ ul, ol { list-style: none; }
 .text-bold { font-weight: 700; }
 .small { font-size: 0.85rem; }
 .text-center { text-align: center; }
+
+/* ── Light Theme ────────────────────────────────────────── */
+body.theme-light,
+html.theme-light {
+    --clr-bg:          #f0f2f7;
+    --clr-surface:     #ffffff;
+    --clr-surface-2:   #f0f2f7;
+    --clr-border:      #d8dce8;
+    --clr-border-focus:#3d7aed;
+    --clr-text:        #1a1f2e;
+    --clr-text-muted:  #6b7592;
+}
+
