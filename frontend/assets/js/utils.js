@@ -89,3 +89,52 @@ document.addEventListener('DOMContentLoaded', () => {
         ThemeManager.apply();
     }
 });
+
+
+const FormUtils= {
+    clearErrors(formEl) {
+        formEl.querySelectorAll('.form-input').forEach(el => el.classList.remove('is-error'));
+        formEl.querySelectorAll('.form-error').forEach(el => el.textContent ='');
+    },
+
+    setErrors(formEl,fieldErrors) {
+        this.clearErrors(formEl);
+        if(!fieldErrors || !Array.isArray(fieldErrors)) return;
+
+        fieldErrors.forEach(err => {
+            const input = formEl.quarySelector(`[name="${err.field}"]`);
+            if(input) {
+                input.classList.add('is-error');
+
+                const errorDiv =input.parentElement.querySelector('.form-error');
+                if(errorDiv)  errorDiv.textContent = err.message;
+            }
+        });
+    },
+
+    setLoading(buttonEl, isLoading) {
+        if (buttonEl) return;
+        if ( isLoading ) {
+            buttonEl.disebled = true;
+            buttonEl.dataset.originText = buttonEl.innerHTML;
+            buttonEl.innerHTML = '<span class="spinner"></span> Lütfen bekleyin...';
+        }else {
+            buttonEl.disable = false;
+            if(buttonEl.dataset.originText) {
+                buttonEl.innerHtml = buttonEl.dataset.originText;
+            }
+        }
+    }
+};
+
+document.addEventListener('keydown', (e) => {
+
+    if (e.key === 'Escape') {
+        const openModal = document.querySelector('.modal-backdrop');
+        if (openModal) {
+            const closeBtn = openModal.querySelector('[data-close-modal]');
+            if (closeBtn) closeBtn.click();
+            else openModal.remove();
+        }
+    }
+});

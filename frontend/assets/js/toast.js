@@ -39,7 +39,7 @@ const Toast = (() => {
 
     return {
         success: (msg, d) => show(msg, 'success', d),
-        error:   (msg, d) => show(msg, 'error',   d ?? 5000),
+        error:   (msg, d) => show(msg, 'error',   d ?? 5000), // Hata mesajları biraz daha uzun kalır
         info:    (msg, d) => show(msg, 'info',    d),
         warning: (msg, d) => show(msg, 'warning', d),
     };

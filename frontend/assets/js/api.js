@@ -11,16 +11,6 @@ const Api = (() => {
         _refreshQueue = [];
     }
 
-    /**
-     * Chrome extension "message channel closed" hatasının sebebi:
-     * fetch() Promise'i bir chrome.runtime.onMessage listener içinde
-     * await'lendiğinde listener fonksiyonu Promise döndürür ama
-     * runtime bunu `true` return gibi algılayıp channel'ı açık tutar,
-     * sonra GC kapatır → hata.
-     *
-     * Çözüm: request() içindeki tüm async işlemler kendi try/catch'ine
-     * sahip; dışarıya sızan unhandled rejection yok.
-     */
     async function request(method, path, body = null, skipAuth = false) {
         const headers = { 'Content-Type': 'application/json' };
 
@@ -36,9 +26,18 @@ const Api = (() => {
         try {
             res = await fetch(BASE + path, config);
         } catch (networkErr) {
-            // Network hatası — sunucuya ulaşılamıyor
-            throw new ApiError(0, 'NETWORK_ERROR',
-                'Sunucuya bağlanılamadı. Backend çalışıyor mu? (' + networkErr.message + ')');
+            // Global Network Hatası Yönetimi (Sunucu kapalıysa)
+            if (window.Toast) {
+                Toast.error('Sunucuya bağlanılamadı. İnternet bağlantınızı veya sunucuyu kontrol edin.');
+            }
+            throw new ApiError(0, 'NETWORK_ERROR', 'Sunucuya bağlanılamadı. (' + networkErr.message + ')');
+        }
+
+        // Global 500 Sunucu Hatası Yönetimi
+        if (res.status >= 500) {
+            if (window.Toast) {
+                Toast.error(`Sunucu tarafında bir hata oluştu (Hata: ${res.status}). Lütfen tekrar deneyin.`);
+            }
         }
 
         // Token expire — refresh dene
@@ -50,7 +49,6 @@ const Api = (() => {
             }
 
             if (_refreshing) {
-                // Diğer istekler yeni token gelene kadar bekler
                 return new Promise((resolve, reject) => {
                     _refreshQueue.push({
                         resolve: token => {
@@ -82,14 +80,12 @@ const Api = (() => {
     }
 
     async function _parseResponse(res) {
-        // 204 No Content
         if (res.status === 204) return null;
 
         let json = null;
         try {
             json = await res.json();
         } catch {
-            // JSON parse edilemedi — boş body
             if (!res.ok) {
                 throw new ApiError(res.status, 'PARSE_ERROR', `HTTP ${res.status}`);
             }
@@ -103,8 +99,6 @@ const Api = (() => {
             throw new ApiError(res.status, code, msg, fields);
         }
 
-        // ApiResponse wrapper: { success, data, message, timestamp }
-        // api.js data'yı unwrap eder; yoksa json'u direkt döner
         return json?.data !== undefined ? json.data : json;
     }
 
@@ -112,7 +106,6 @@ const Api = (() => {
         get(path, params) {
             const qs = params && Object.keys(params).length
                 ? '?' + new URLSearchParams(
-                // null/undefined değerleri filtrele
                 Object.fromEntries(
                     Object.entries(params).filter(([, v]) => v != null)
                 )
@@ -124,12 +117,10 @@ const Api = (() => {
         put:        (path, body)  => request('PUT',     path, body),
         patch:      (path, body)  => request('PATCH',   path, body),
         del:        (path)        => request('DELETE',  path),
-        // skipAuth=true → login/refresh endpoint'leri için
         postPublic: (path, body)  => request('POST', path, body, true),
     };
 })();
 
-// Özel hata sınıfı; status + code + fieldErrors taşır
 class ApiError extends Error {
     constructor(status, code, message, fieldErrors = null) {
         super(message);
