@@ -1,10 +1,95 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroStep — Denetim Günlükleri (Audit)</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <script src="../../assets/js/theme-init.js"></script>
+    <link rel="stylesheet" href="../../assets/css/components.css">
+    <link rel="stylesheet" href="../../assets/css/layout.css">
 </head>
 <body>
+<div id="toast-container"></div>
 
+<div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar" role="complementary"></aside>
+    <!-- Topbar -->
+    <header class="topbar" id="topbar" role="banner"></header>
+
+    <main class="main-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <h2 class="page-title" style="margin: 0;">Denetim Günlükleri</h2>
+            <button class="btn btn-outline" id="export-audit-btn">
+                <i class="fas fa-download"></i> Dışa Aktar
+            </button>
+        </div>
+
+        <div class="card filter-bar mt-4">
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <div class="form-group mb-0" style="flex: 1; min-width: 200px;">
+                    <input type="text" class="form-input" id="audit-search" placeholder="Kullanıcı adı veya işlem ara...">
+                </div>
+                <div class="form-group mb-0" style="flex: 1; min-width: 150px;">
+                    <select class="form-input" id="audit-action-filter">
+                        <option value="">Tüm İşlemler</option>
+                        <option value="CREATE">Oluşturma</option>
+                        <option value="UPDATE">Güncelleme</option>
+                        <option value="DELETE">Silme</option>
+                        <option value="LOGIN">Giriş</option>
+                    </select>
+                </div>
+                <div class="form-group mb-0" style="flex: 1; min-width: 150px;">
+                    <input type="date" class="form-input" id="audit-date-filter">
+                </div>
+                <button class="btn btn-primary" id="apply-filters-btn">
+                    <i class="fas fa-filter"></i> Filtrele
+                </button>
+            </div>
+        </div>
+
+        <div class="card p-0 mt-4">
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Kullanıcı</th>
+                        <th>İşlem (Action)</th>
+                        <th>Kaynak (Resource)</th>
+                        <th>IP Adresi</th>
+                        <th>Durum</th>
+                        <th style="text-align: right;">Detay</th>
+                    </tr>
+                    </thead>
+                    <tbody id="audit-body">
+                    <tr><td colspan="7" class="text-center p-8">Yükleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="pagination-container" class="mt-4"></div>
+    </main>
+</div>
+
+<script src="../../assets/js/utils.js"></script>
+<script src="../../assets/js/store.js"></script>
+<script src="../../assets/js/toast.js"></script>
+<script src="../../assets/js/router.js"></script>
+<script src="../../assets/js/api.js"></script>
+<script src="../../assets/js/auth.js"></script>
+<script src="../../js/components/sidebar.js"></script>
+<script src="../../js/components/topbar.js"></script>
+<script src="../../js/components/pagination.js"></script>
+<script src="../../js/components/modal.js"></script>
+<script src="../../js/pages/admin-audit.js"></script>
 </body>
 </html>
