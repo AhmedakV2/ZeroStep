@@ -12,8 +12,11 @@
         loadRecentNotifications() // Eger bu fonksiyon baska dosyada ise sorunsuz çalışmaya devam eder
     ]);
 
-    // Fare hareketiyle arka plan ışıklarını (orbları) hareket ettirme (Parallax)
-    initParallaxOrbs();
+    // Not: Parallax orb animasyonları animations.js tarafından başlatılır
+    // Eğer animations.js yüklü değilse fallback olarak legacy sürümü çağır
+    if (typeof initParallaxOrbsLegacy === 'function') {
+        setTimeout(() => initParallaxOrbsLegacy(), 100);
+    }
 })();
 
 // ── Stat Kartları ─────────────────────────────────────────────
@@ -149,7 +152,9 @@ function statusBadge(status) {
 }
 
 // ── Parallax Etkileşimi (Mouse Takibi) ─────────────────────────
-function initParallaxOrbs() {
+// Not: Bu fonksiyon animations.js'de de tanımlanmıştır ve daha verimli şekilde çalışır.
+// Bu eski sürüm silinebilir, ancak animations.js yüklü değilse fallback olarak kalsın.
+function initParallaxOrbsLegacy() {
     const orbWraps = [
         document.getElementById('orb1-wrap'),
         document.getElementById('orb2-wrap'),

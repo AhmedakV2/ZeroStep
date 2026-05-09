@@ -439,12 +439,16 @@
 
     // ── Init ─────────────────────────────────────────────────
     function init() {
-        // Sadece giriş yapmış kullanıcılar için mount et
-        if (typeof Auth === 'undefined' || !Auth.isLoggedIn()) return;
+        // Auth modülü henüz yüklenmediyse bekle
+        if (typeof Auth === 'undefined') {
+            document.addEventListener('DOMContentLoaded', init);
+            return;
+        }
+
+        if (!Auth.isLoggedIn()) return;
 
         me = Auth.getCurrentUser();
 
-        // DOM hazır olduğunda mount et
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 mount();
@@ -457,7 +461,6 @@
             connectWS();
         }
 
-        // Sayfa kapatılınca WS'yi temizle
         window.addEventListener('beforeunload', () => {
             if (stompClient?.connected) stompClient.disconnect();
         });

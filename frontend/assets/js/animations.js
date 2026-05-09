@@ -174,28 +174,28 @@
     // ── Tema Animasyonları (light/dark geçiş) ────────────────
     function initThemeTransition() {
         // Tema değişimini smooth yap
+        if (document.getElementById('zs-theme-transition')) return;
+
         const style = document.createElement('style');
+        style.id = 'zs-theme-transition';
         style.textContent = `
-            *, *::before, *::after {
+            body, html {
+                transition:
+                    background-color 0.3s ease,
+                    color 0.3s ease !important;
+            }
+            .stat-card, .glass-card, .card, .sidebar, .topbar {
                 transition:
                     background-color 0.3s ease,
                     border-color 0.3s ease,
                     color 0.2s ease !important;
             }
             /* Animasyonları olumsuz etkilememesi için override */
-            .stagger-item, .floating-orb, .spinner, .toast {
+            .stagger-item, .floating-orb, .spinner, .toast, .cw-bubble {
                 transition: none !important;
             }
         `;
-        // Sadece tema değişirken geçici olarak ekle
-        const origSet = ThemeManager?.set;
-        if (window.ThemeManager && origSet) {
-            ThemeManager.set = function(theme) {
-                document.head.appendChild(style);
-                origSet.call(ThemeManager, theme);
-                setTimeout(() => style.remove(), 400);
-            };
-        }
+        document.head.appendChild(style);
     }
 
     // ── Init ─────────────────────────────────────────────────

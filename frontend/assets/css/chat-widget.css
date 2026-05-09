@@ -474,3 +474,92 @@
         height: 420px;
     }
 }
+
+/* ── Light Theme Support ────────────────────────────────── */
+body.theme-light #chat-widget-fab {
+    background: var(--clr-primary);
+    box-shadow: 0 4px 20px rgba(124, 101, 212, 0.3);
+}
+
+body.theme-light #chat-widget-fab:hover {
+    background: var(--clr-primary-h);
+    box-shadow: 0 6px 28px rgba(124, 101, 212, 0.4);
+}
+
+body.theme-light #chat-widget-panel {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(180, 188, 210, 0.5);
+    box-shadow: 0 20px 60px rgba(30, 35, 70, 0.15);
+}
+
+body.theme-light .cw-header {
+    background: rgba(230, 233, 241, 0.7);
+    border-bottom-color: rgba(180, 188, 210, 0.5);
+}
+
+body.theme-light .cw-header-icon {
+    background: rgba(124, 101, 212, 0.1);
+    color: var(--clr-primary);
+}
+
+body.theme-light .cw-conv-item:hover {
+    background: rgba(124, 101, 212, 0.08);
+}
+
+body.theme-light .cw-conv-list {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+body.theme-light .cw-msg-panel {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+body.theme-light .cw-msg-header {
+    background: rgba(230, 233, 241, 0.7);
+    border-bottom-color: rgba(180, 188, 210, 0.5);
+}
+
+body.theme-light .cw-messages {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+body.theme-light .cw-msg-row.mine .cw-bubble {
+    background: var(--clr-primary);
+    color: #fff;
+}
+
+body.theme-light .cw-msg-row.theirs .cw-bubble {
+    background: rgba(230, 233, 241, 0.8);
+    color: var(--clr-text);
+    border-color: rgba(180, 188, 210, 0.5);
+}
+
+body.theme-light .cw-textarea {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(180, 188, 210, 0.6);
+    color: var(--clr-text);
+}
+
+body.theme-light .cw-textarea:focus {
+    border-color: var(--clr-border-focus);
+    box-shadow: 0 0 0 3px rgba(124, 101, 212, 0.15);
+    background: #ffffff;
+}
+
+body.theme-light .cw-input-area {
+    background: rgba(230, 233, 241, 0.7);
+    border-top-color: rgba(180, 188, 210, 0.5);
+}
+
+body.theme-light .cw-send-btn {
+    background: var(--clr-primary);
+}
+
+body.theme-light .cw-send-btn:hover {
+    background: var(--clr-primary-h);
+}
+
+body.theme-light .cw-loading,
+body.theme-light .cw-empty {
+    color: var(--clr-text-muted);
+}

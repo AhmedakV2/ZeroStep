@@ -374,20 +374,58 @@
               : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
     });
 
-    // 3D Tilt ve Parallax Etkileşimi
+    // 3D Tilt ve Parallax Etkileşimi (Smooth lerp ile optimize edilmiş)
+    let tiltX = 0, tiltY = 0;
+    let targetTiltX = 0, targetTiltY = 0;
+    let targetOrbX = 0, targetOrbY = 0;
+    let currentOrbX = 0, currentOrbY = 0;
+    let rafId = null;
+
+    function smoothAnimate() {
+        // Smooth tilt lerp
+        tiltX += (targetTiltX - tiltX) * 0.08;
+        tiltY += (targetTiltY - tiltY) * 0.08;
+
+        // Smooth orb lerp
+        currentOrbX += (targetOrbX - currentOrbX) * 0.06;
+        currentOrbY += (targetOrbY - currentOrbY) * 0.06;
+
+        if (Math.abs(tiltX - targetTiltX) > 0.1 || Math.abs(tiltY - targetTiltY) > 0.1 ||
+            Math.abs(currentOrbX - targetOrbX) > 0.5 || Math.abs(currentOrbY - targetOrbY) > 0.5) {
+            card.style.transform = `rotateY(${tiltX}deg) rotateX(${tiltY}deg) translateZ(10px)`;
+            orbWraps.forEach((wrap, index) => {
+                if (wrap) {
+                    const factor = (index + 1) * 15;
+                    wrap.style.transform = `translate(${currentOrbX / factor}px, ${currentOrbY / factor}px)`;
+                }
+            });
+            rafId = requestAnimationFrame(smoothAnimate);
+        }
+    }
+
     setTimeout(() => {
       document.addEventListener('mousemove', (e) => {
-        const xAxis = (e.pageX - window.innerWidth / 2) / 20;
-        const yAxis = -(e.pageY - window.innerHeight / 2) / 20;
-        card.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg) translateZ(10px)`;
-        orbWraps.forEach((wrap, index) => {
-          const factor = (index + 1) * 15;
-          wrap.style.transform = `translate(${e.pageX / factor}px, ${e.pageY / factor}px)`;
-        });
+        targetTiltX = (e.pageX - window.innerWidth / 2) / 20;
+        targetTiltY = -(e.pageY - window.innerHeight / 2) / 20;
+        targetOrbX = e.pageX;
+        targetOrbY = e.pageY;
+        if (rafId === null) {
+            smoothAnimate();
+        }
       });
       document.addEventListener('mouseleave', () => {
+        targetTiltX = 0;
+        targetTiltY = 0;
+        targetOrbX = 0;
+        targetOrbY = 0;
+        if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+        }
         card.style.transform = `rotateY(0deg) rotateX(0deg) translateZ(0)`;
-        orbWraps.forEach(wrap => wrap.style.transform = `translate(0, 0)`);
+        orbWraps.forEach(wrap => {
+            if (wrap) wrap.style.transform = `translate(0, 0)`;
+        });
       });
     }, 800);
 

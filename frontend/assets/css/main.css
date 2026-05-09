@@ -95,6 +95,25 @@ ul, ol { list-style: none; }
 .small { font-size: 0.85rem; }
 .text-center { text-align: center; }
 
+/* Stagger Fade-Up Animasyonu */
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.stagger-item {
+    opacity: 0;
+    transform: translateY(15px);
+    animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.stagger-item.delay-1 { animation-delay: 0.1s; }
+.stagger-item.delay-2 { animation-delay: 0.2s; }
+.stagger-item.delay-3 { animation-delay: 0.3s; }
+.stagger-item.delay-4 { animation-delay: 0.4s; }
+.stagger-item.delay-5 { animation-delay: 0.5s; }
+.stagger-item.delay-6 { animation-delay: 0.6s; }
+
 /* ── Light Theme ────────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════
    LIGHT THEME — Yeniden Düzenlenmiş
