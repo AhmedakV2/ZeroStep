@@ -3,156 +3,345 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZeroStep — Login</title>
+  <title>ZeroStep — Giriş</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;800&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="assets/css/main.css">
   <script src="assets/js/theme-init.js"></script>
   <link rel="stylesheet" href="assets/css/components.css">
   <link rel="stylesheet" href="assets/css/layout.css">
 
   <style>
-    /* Login sayfasına özel arka plan efekti */
-    .login-bg {
-      position: fixed; inset: 0;
-      background:
-              radial-gradient(ellipse 80% 60% at 50% -10%, rgba(61,122,237,.18) 0%, transparent 70%),
-              var(--clr-bg);
-    }
-    .login-card {
-      position: relative;
-      width: 100%;
-      max-width: 400px;
-      z-index: 1;
-    }
-    .login-logo {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-    .login-logo-text {
-      font-family: var(--font-ui);
-      font-size: 1.6rem;
-      font-weight: 600;
-      color: var(--clr-text);
-      letter-spacing: -.02em;
-    }
-    .login-logo-text span { color: var(--clr-primary); }
-    .login-tagline {
-      font-size: 0.78rem;
-      color: var(--clr-text-muted);
-      margin-top: 0.25rem;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-    }
-    .login-form { display: flex; flex-direction: column; gap: 1.1rem; }
-    .login-submit { margin-top: 0.5rem; height: 2.75rem; font-size: 0.95rem; }
+    :root {
+      --bg: #121214;
+      --bg-card: rgba(18, 18, 20, 0.7);
+      --bg-glass: rgba(255, 255, 255, 0.03);
+      --border: rgba(255, 255, 255, 0.1);
 
-    /* Şifre alanı toggle */
+      /* YENİ TOZLU MOR RENGİMİZ */
+      --primary: #9e86e8;
+      --primary-hover: #b4a0ed;
+      --border-focus: rgba(158, 134, 232, 0.4);
+      --primary-glow: rgba(158, 134, 232, 0.15);
+
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --danger: #ff4d4d;
+      --danger-bg: rgba(255, 77, 77, 0.1);
+      --success: #ffffff;
+      --shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.5);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* ── Animasyonlu Arka Plan ─────────────────────────── */
+    .bg-canvas {
+      position: fixed; inset: 0; z-index: 0;
+      background:
+              radial-gradient(ellipse 80% 50% at 20% 40%, rgba(255,255,255,0.06) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 40% at 80% 60%, rgba(255,255,255,0.04) 0%, transparent 50%),
+              radial-gradient(ellipse 50% 50% at 50% 100%, rgba(255,255,255,0.05) 0%, transparent 50%);
+    }
+
+    .bg-grid {
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+              linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 30%, transparent 70%);
+      -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 30%, transparent 70%);
+    }
+
+    /* Fare etkileşimi için taşıyıcı eklendi */
+    .parallax-orb {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      transition: transform 0.2s ease-out;
+    }
+
+    .floating-orb {
+      position: absolute; border-radius: 50%; filter: blur(80px);
+      opacity: 0.4; animation: float 20s ease-in-out infinite;
+    }
+    .orb-1 { width: 400px; height: 400px; background: rgba(255,255,255,0.12); top: -10%; left: -5%; }
+    .orb-2 { width: 300px; height: 300px; background: rgba(255,255,255,0.08); bottom: -5%; right: -5%; animation-delay: -7s; }
+    .orb-3 { width: 250px; height: 250px; background: rgba(255,255,255,0.05); top: 40%; right: 20%; animation-delay: -14s; }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -30px) scale(1.1); }
+      66% { transform: translate(-20px, 20px) scale(0.95); }
+    }
+
+    /* ── Kayan Yazı (Slider) Efektleri ─────────────────────────── */
+    .text-slider { position: fixed; left: 0; width: 100vw; overflow: hidden; z-index: 0; pointer-events: none; user-select: none; }
+    .slider-top { top: 4vh; }
+    .slider-bottom { bottom: 4vh; }
+    .slider-track { display: flex; width: max-content; animation: marquee 45s linear infinite; }
+    .slider-track.reverse { animation-direction: reverse; }
+    .slider-text {
+      font-family: 'JetBrains Mono', monospace; font-size: 6vw; font-weight: 800;
+      color: transparent; -webkit-text-stroke: 1px rgba(255, 255, 255, 0.4);
+      text-shadow: 0 0 2px rgba(255, 255, 255, 0.05); text-transform: uppercase;
+      padding-right: 2rem; letter-spacing: 0.05em;
+    }
+
+    @keyframes marquee { to { transform: translateX(-50%); } }
+
+    /* ── Ana Kart & 3D Etkileşim ────────────────────────────── */
+    .login-wrapper {
+      position: relative; z-index: 1; width: 100%; max-width: 420px;
+      padding: 0 1.5rem; perspective: 1200px; transform-style: preserve-3d;
+    }
+
+    /* Titreme Animasyonu Sınıfı (Hata durumunda) */
+    .shake-anim { animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      50% { transform: translateX(8px); }
+      75% { transform: translateX(-8px); }
+    }
+
+    .login-card {
+      background: var(--bg-card); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border); border-radius: 20px; padding: 3rem 2.5rem;
+      box-shadow: var(--shadow), 0 0 0 1px rgba(255,255,255,0.05) inset;
+      animation: cardEnter 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      opacity: 0; transform: translateY(20px) rotateX(5deg);
+      transition: transform 0.1s ease-out; /* 3D tilt için */
+    }
+
+    @keyframes cardEnter { to { opacity: 1; transform: translateY(0) rotateX(0); } }
+
+    /* Kademeli Belirme Sınıfları */
+    .stagger-item {
+      opacity: 0; transform: translateY(15px);
+      animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .delay-1 { animation-delay: 0.2s; }
+    .delay-2 { animation-delay: 0.3s; }
+    .delay-3 { animation-delay: 0.4s; }
+    .delay-4 { animation-delay: 0.5s; }
+
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Logo ──────────────────────────────────────────── */
+    .logo-section { text-align: center; margin-bottom: 2rem; }
+    .logo-icon {
+      width: 52px; height: 52px; margin: 0 auto 1rem;
+      background: linear-gradient(135deg, #ffffff, #737373); border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 6px 24px rgba(255,255,255,0.15); animation: logoPulse 3s ease-in-out infinite;
+    }
+    @keyframes logoPulse {
+      0%, 100% { box-shadow: 0 6px 24px rgba(255,255,255,0.15); }
+      50% { box-shadow: 0 6px 32px rgba(255,255,255,0.25); }
+    }
+    .logo-icon svg { width: 26px; height: 26px; color: #000000; }
+    .logo-text {
+      font-size: 1.6rem; font-weight: 700; letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* ── Form ──────────────────────────────────────────── */
+    .login-form { display: flex; flex-direction: column; gap: 1.15rem; }
+    .form-group { position: relative; }
+    .form-label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); margin-bottom: 0.4rem; }
     .input-wrapper { position: relative; }
+
+    .form-input {
+      width: 100%; height: 48px; padding: 0 1rem;
+      background: var(--bg-glass); border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text); font-size: 0.95rem; transition: all 0.2s ease; outline: none;
+    }
+    .form-input:focus {
+      border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow);
+      background: rgba(255,255,255,0.08);
+    }
     .input-wrapper .form-input { padding-right: 2.5rem; }
+
     .pw-toggle {
       position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);
-      background: none; border: none; color: var(--clr-text-muted);
-      cursor: pointer; padding: 0; font-size: 1rem; line-height: 1;
+      background: none; border: none; color: var(--text-muted); cursor: pointer; transition: color 0.2s;
     }
-    .pw-toggle:hover { color: var(--clr-text); }
+    .pw-toggle:hover { color: var(--text); }
+
+    /* ── DÜZELTİLEN BUTON VE PARLAMA EFEKTİ ──────────────── */
+    .btn-primary {
+      position: relative; overflow: hidden; height: 48px; margin-top: 0.5rem;
+      background: rgba(255, 255, 255, 0.05) !important; /* Normalde Şeffaf */
+      color: #ffffff !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 10px; font-size: 1rem; font-weight: 600;
+      cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-primary::after {
+      content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transform: skewX(-20deg); transition: 0.5s;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      background: var(--primary) !important; /* Üzerine gelince KESİN mor olur */
+      color: #000000 !important; /* Yazı KESİN siyah olur */
+      border-color: var(--primary) !important;
+      box-shadow: 0 8px 25px var(--primary-glow) !important;
+    }
+
+    .btn-primary:hover::after {
+      left: 200%; transition: 0.6s;
+    }
+    .form-error {
+      display: block; font-size: 0.75rem; color: var(--danger);
+      margin-top: 0.35rem; min-height: 1rem; opacity: 0; transition: 0.2s;
+    }
+    .form-error.visible { opacity: 1; }
+
+    .spinner {
+      display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.2);
+      border-top-color: #000000; border-radius: 50%; animation: spin 0.8s linear infinite;
+      margin-right: 6px; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .alert {
+      padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.85rem;
+      background: var(--danger-bg); border: 1px solid rgba(255,255,255,0.2); color: #ffffff;
+    }
+    .hidden { display: none; }
+
+    /* ── Modal ─────────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+      z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+    }
+    .modal {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px;
+      padding: 2.25rem; width: 100%; max-width: 400px; box-shadow: var(--shadow);
+    }
+    .modal-title {
+      font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #ffffff, #a3a3a3); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    .dots {
+      position: fixed; inset: 0; z-index: 0;
+      background-image: radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px); background-size: 24px 24px;
+      mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 70%); pointer-events: none;
+    }
+
+    @media (max-width: 500px) {
+      .login-card { padding: 2.5rem 2rem; }
+      .slider-text { font-size: 12vw; }
+    }
   </style>
 </head>
 <body>
 
 <div id="toast-container"></div>
 
-<!-- ── Login ekranı ────────────────────────────────────── -->
-<div id="app-login" class="login-bg center-layout">
-  <div class="login-card card">
-    <div class="login-logo">
-      <div class="login-logo-text">Zero<span>Step</span></div>
-      <div class="login-tagline">Test Otomasyon Platformu</div>
+<div class="bg-canvas"></div>
+<div class="bg-grid"></div>
+<div class="dots"></div>
+
+<div class="parallax-orb" id="orb1-wrap"><div class="floating-orb orb-1"></div></div>
+<div class="parallax-orb" id="orb2-wrap"><div class="floating-orb orb-2"></div></div>
+<div class="parallax-orb" id="orb3-wrap"><div class="floating-orb orb-3"></div></div>
+
+<div class="text-slider slider-top">
+  <div class="slider-track">
+    <div class="slider-text">ZEROSTEP TEST OTOMASYON PLATFORMU • ZEROSTEP TEST OTOMASYON PLATFORMU • </div>
+    <div class="slider-text">ZEROSTEP TEST OTOMASYON PLATFORMU • ZEROSTEP TEST OTOMASYON PLATFORMU • </div>
+  </div>
+</div>
+
+<div class="text-slider slider-bottom">
+  <div class="slider-track reverse">
+    <div class="slider-text">ZEROSTEP TEST OTOMASYON PLATFORMU • ZEROSTEP TEST OTOMASYON PLATFORMU • </div>
+    <div class="slider-text">ZEROSTEP TEST OTOMASYON PLATFORMU • ZEROSTEP TEST OTOMASYON PLATFORMU • </div>
+  </div>
+</div>
+
+<div class="login-wrapper" id="loginWrapper">
+  <div class="login-card" id="loginCard">
+    <div class="logo-section stagger-item delay-1">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <div class="logo-text">ZeroStep</div>
     </div>
 
     <form id="login-form" class="login-form" novalidate>
-      <div class="form-group">
-        <label class="form-label" for="username">Kullanıcı Adı</label>
-        <input
-                class="form-input"
-                type="text"
-                id="username"
-                name="username"
-                autocomplete="username"
-                autofocus
-                placeholder="admin"
-        >
+      <div class="form-group stagger-item delay-2">
+        <label class="form-label">Kullanıcı Adı</label>
+        <input class="form-input" type="text" id="username" autofocus placeholder="ör. Ahmet">
         <span class="form-error" id="username-error"></span>
       </div>
 
-      <div class="form-group">
-        <label class="form-label" for="password">Şifre</label>
+      <div class="form-group stagger-item delay-3">
+        <label class="form-label">Şifre</label>
         <div class="input-wrapper">
-          <input
-                  class="form-input"
-                  type="password"
-                  id="password"
-                  name="password"
-                  autocomplete="current-password"
-                  placeholder="••••••••"
-          >
-          <button type="button" class="pw-toggle" id="pw-toggle-btn" aria-label="Şifreyi göster">👁</button>
+          <input class="form-input" type="password" id="password" placeholder="••••••••">
+          <button type="button" class="pw-toggle" id="pw-toggle-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
         </div>
         <span class="form-error" id="password-error"></span>
       </div>
 
-      <!-- Genel hata alanı -->
-      <div id="login-error" class="alert alert-danger hidden" role="alert"></div>
+      <div id="login-error" class="alert hidden stagger-item delay-3"></div>
 
-      <button type="submit" class="btn btn-primary w-full login-submit" id="login-btn">
-        Giriş Yap
-      </button>
+      <button type="submit" class="btn-primary stagger-item delay-4" id="login-btn">Giriş Yap</button>
     </form>
   </div>
 </div>
 
-<!-- ── Şifre Değiştirme Modal ──────────────────────────── -->
 <div id="change-password-modal" class="modal-backdrop hidden">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cpw-title">
-    <div class="modal-header">
-      <h2 class="modal-title" id="cpw-title">Şifre Değiştirme Zorunlu</h2>
-    </div>
-
-    <p style="font-size:.88rem;color:var(--clr-text-muted);margin-bottom:1.25rem;">
-      İlk girişte şifrenizi değiştirmeniz gerekmektedir.
-    </p>
-
-    <form id="change-password-form" novalidate>
-      <div style="display:flex;flex-direction:column;gap:1rem;">
-        <div class="form-group">
-          <label class="form-label" for="cpw-current">Mevcut Şifre</label>
-          <input class="form-input" type="password" id="cpw-current" name="currentPassword" placeholder="••••••••">
-          <span class="form-error" id="cpw-current-error"></span>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="cpw-new">Yeni Şifre</label>
-          <input class="form-input" type="password" id="cpw-new" name="newPassword" placeholder="Min 8 karakter">
-          <span class="form-error" id="cpw-new-error"></span>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="cpw-confirm">Yeni Şifre (Tekrar)</label>
-          <input class="form-input" type="password" id="cpw-confirm" name="confirmPassword" placeholder="Tekrar girin">
-          <span class="form-error" id="cpw-confirm-error"></span>
-        </div>
-
-        <div id="cpw-error" class="alert alert-danger hidden"></div>
-
-        <div class="flex gap-1" style="justify-content:flex-end;margin-top:.5rem;">
-          <button type="submit" class="btn btn-primary" id="cpw-submit-btn">Şifreyi Değiştir</button>
-        </div>
+  <div class="modal">
+    <h2 class="modal-title">Şifre Değiştirme Zorunlu</h2>
+    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem;">İlk girişte şifrenizi değiştirmeniz gerekmektedir.</p>
+    <form id="change-password-form" class="login-form">
+      <div class="form-group">
+        <label class="form-label">Mevcut Şifre</label>
+        <input class="form-input" type="password" id="cpw-current">
       </div>
+      <div class="form-group">
+        <label class="form-label">Yeni Şifre</label>
+        <input class="form-input" type="password" id="cpw-new" placeholder="Min 8 karakter">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Yeni Şifre (Tekrar)</label>
+        <input class="form-input" type="password" id="cpw-confirm">
+      </div>
+      <div id="cpw-error" class="alert hidden"></div>
+      <button type="submit" class="btn-primary" id="cpw-submit-btn" style="width:100%; margin-top:0.5rem;">Şifreyi Değiştir</button>
     </form>
   </div>
 </div>
 
-<!-- ── Scripts ─────────────────────────────────────────── -->
 <script src="assets/js/utils.js"></script>
 <script src="assets/js/store.js"></script>
 <script src="assets/js/toast.js"></script>
@@ -161,7 +350,6 @@
 <script src="assets/js/auth.js"></script>
 
 <script>
-  // ── Login form mantığı ─────────────────────────────────
   (function () {
     const form       = document.getElementById('login-form');
     const loginBtn   = document.getElementById('login-btn');
@@ -169,172 +357,79 @@
     const pwToggle   = document.getElementById('pw-toggle-btn');
     const pwInput    = document.getElementById('password');
 
-    // Şifreyi göster/gizle
+    // Animasyonlar için tanımlamalar
+    const wrapper    = document.getElementById('loginWrapper');
+    const card       = document.getElementById('loginCard');
+    const orbWraps   = [
+      document.getElementById('orb1-wrap'),
+      document.getElementById('orb2-wrap'),
+      document.getElementById('orb3-wrap')
+    ];
+
     pwToggle.addEventListener('click', () => {
       const isHidden = pwInput.type === 'password';
       pwInput.type = isHidden ? 'text' : 'password';
-      pwToggle.textContent = isHidden ? '🙈' : '👁';
+      pwToggle.innerHTML = isHidden
+              ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+              : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
     });
 
-    function setLoading(loading) {
-      loginBtn.disabled = loading;
-      loginBtn.innerHTML = loading
-              ? '<span class="spinner"></span> Giriş yapılıyor...'
-              : 'Giriş Yap';
-    }
-
-    function clearErrors() {
-      document.getElementById('username-error').textContent = '';
-      document.getElementById('password-error').textContent = '';
-      loginError.classList.add('hidden');
-      loginError.textContent = '';
-      document.getElementById('username').classList.remove('is-error');
-      document.getElementById('password').classList.remove('is-error');
-    }
-
-    function showError(msg) {
-      loginError.textContent = msg;
-      loginError.classList.remove('hidden');
-    }
-
-    function validate(username, password) {
-      let ok = true;
-      if (Utils.isBlank(username)) {
-        document.getElementById('username-error').textContent = 'Kullanıcı adı boş olamaz';
-        document.getElementById('username').classList.add('is-error');
-        ok = false;
-      }
-      if (Utils.isBlank(password)) {
-        document.getElementById('password-error').textContent = 'Şifre boş olamaz';
-        document.getElementById('password').classList.add('is-error');
-        ok = false;
-      }
-      return ok;
-    }
+    // 3D Tilt ve Parallax Etkileşimi
+    setTimeout(() => {
+      document.addEventListener('mousemove', (e) => {
+        const xAxis = (e.pageX - window.innerWidth / 2) / 20;
+        const yAxis = -(e.pageY - window.innerHeight / 2) / 20;
+        card.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg) translateZ(10px)`;
+        orbWraps.forEach((wrap, index) => {
+          const factor = (index + 1) * 15;
+          wrap.style.transform = `translate(${e.pageX / factor}px, ${e.pageY / factor}px)`;
+        });
+      });
+      document.addEventListener('mouseleave', () => {
+        card.style.transform = `rotateY(0deg) rotateX(0deg) translateZ(0)`;
+        orbWraps.forEach(wrap => wrap.style.transform = `translate(0, 0)`);
+      });
+    }, 800);
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      clearErrors();
-
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
 
-      if (!validate(username, password)) return;
+      if (!username || !password) {
+        loginError.textContent = "Lütfen tüm alanları doldurun.";
+        loginError.classList.remove('hidden');
+        wrapper.classList.remove('shake-anim');
+        void wrapper.offsetWidth;
+        wrapper.classList.add('shake-anim');
+        return;
+      }
 
-      setLoading(true);
+      loginBtn.disabled = true;
+      loginBtn.innerHTML = '<span class="spinner"></span> Giriş yapılıyor...';
+      loginError.classList.add('hidden');
+
       try {
         const user = await Auth.login(username, password);
-
         if (user.passwordChangeRequired) {
-          // Şifre değiştirme modal'ını aç; mevcut şifreyi pre-fill et
-          openChangePasswordModal(password);
+          document.getElementById('change-password-modal').classList.remove('hidden');
+          document.getElementById('cpw-current').value = password;
         } else {
           window.location.href = 'pages/dashboard.html';
         }
       } catch (err) {
-        if (err instanceof ApiError) {
-          if (err.status === 401 || err.status === 403) {
-            showError(err.message || 'Kullanıcı adı veya şifre hatalı');
-          } else {
-            showError('Sunucuya bağlanılamadı. Lütfen tekrar deneyin.');
-          }
-        } else {
-          showError('Beklenmedik bir hata oluştu.');
-        }
+        loginError.textContent = err.message || 'Giriş başarısız. Lütfen tekrar deneyin.';
+        loginError.classList.remove('hidden');
+        wrapper.classList.remove('shake-anim');
+        void wrapper.offsetWidth;
+        wrapper.classList.add('shake-anim');
       } finally {
-        setLoading(false);
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Giriş Yap';
       }
     });
-
-    // ── Şifre Değiştirme Modal ─────────────────────────────
-    const modal      = document.getElementById('change-password-modal');
-    const cpwForm    = document.getElementById('change-password-form');
-    const cpwSubmit  = document.getElementById('cpw-submit-btn');
-    const cpwError   = document.getElementById('cpw-error');
-
-    function openChangePasswordModal(prefillPassword = '') {
-      document.getElementById('cpw-current').value = prefillPassword;
-      document.getElementById('cpw-new').value = '';
-      document.getElementById('cpw-confirm').value = '';
-      cpwError.classList.add('hidden');
-      modal.classList.remove('hidden');
-      document.getElementById('cpw-new').focus();
-    }
-
-    function clearCpwErrors() {
-      ['cpw-current', 'cpw-new', 'cpw-confirm'].forEach(id => {
-        document.getElementById(id + '-error').textContent = '';
-        document.getElementById(id).classList.remove('is-error');
-      });
-      cpwError.classList.add('hidden');
-    }
-
-    function validateCpw(current, newPwd, confirm) {
-      let ok = true;
-      if (Utils.isBlank(current)) {
-        document.getElementById('cpw-current-error').textContent = 'Mevcut şifre gerekli';
-        document.getElementById('cpw-current').classList.add('is-error');
-        ok = false;
-      }
-      const pwPattern = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,100}$/;
-      if (!pwPattern.test(newPwd)) {
-        document.getElementById('cpw-new-error').textContent =
-                'Min 8 karakter, büyük/küçük harf, rakam ve özel karakter içermeli';
-        document.getElementById('cpw-new').classList.add('is-error');
-        ok = false;
-      }
-      if (newPwd !== confirm) {
-        document.getElementById('cpw-confirm-error').textContent = 'Şifreler eşleşmiyor';
-        document.getElementById('cpw-confirm').classList.add('is-error');
-        ok = false;
-      }
-      return ok;
-    }
-
-    cpwForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      clearCpwErrors();
-
-      const current = document.getElementById('cpw-current').value;
-      const newPwd  = document.getElementById('cpw-new').value;
-      const confirm = document.getElementById('cpw-confirm').value;
-
-      if (!validateCpw(current, newPwd, confirm)) return;
-
-      cpwSubmit.disabled = true;
-      cpwSubmit.innerHTML = '<span class="spinner"></span> Değiştiriliyor...';
-
-      try {
-        await Api.post('/users/me/change-password', {
-          currentPassword: current,
-          newPassword: newPwd,
-        });
-        Toast.success('Şifre başarıyla değiştirildi. Lütfen tekrar giriş yapın.');
-        modal.classList.add('hidden');
-        Store.clear();
-        // 1.5 saniye sonra login sayfasını yenile
-        setTimeout(() => window.location.reload(), 1500);
-      } catch (err) {
-        cpwError.textContent = err.message || 'Şifre değiştirilemedi';
-        cpwError.classList.remove('hidden');
-      } finally {
-        cpwSubmit.disabled = false;
-        cpwSubmit.textContent = 'Şifreyi Değiştir';
-      }
-    });
-
-    // ── Zaten giriş yapılmışsa dashboard'a at ─────────────
-    if (Auth.isLoggedIn()) {
-      const user = Auth.getCurrentUser();
-      if (user?.passwordChangeRequired) {
-        openChangePasswordModal();
-      } else {
-        window.location.href = 'pages/dashboard.html';
-      }
-    }
-  })(); 
+  })();
 </script>
-
 
 </body>
 </html>

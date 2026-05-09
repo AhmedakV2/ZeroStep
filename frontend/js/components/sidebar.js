@@ -19,10 +19,8 @@ const Sidebar = (() => {
         },
     ];
 
-    // Geçerli sayfa URL'ini normalize et
     function _currentPage() {
         const path = window.location.pathname;
-        // Hem /pages/X.html hem de pages/X.html şeklinde çalışsın
         return path.replace(/^.*\/frontend\//, '');
     }
 
@@ -70,19 +68,10 @@ const Sidebar = (() => {
             </a>`;
     }
 
-    // pages/X.html → doğru relative path hesapla
     function _resolveHref(href) {
         const cur = window.location.pathname;
-        // Admin alt dizininde isek (pages/admin/users.html) üst üste çık
-        if (cur.includes('/admin/')) {
-            // pages/admin/users.html → ../../pages/dashboard.html
-            // pages/admin/roles.html → ../../pages/scenarios.html
-            return '../../' + href;
-        }
-        if (cur.includes('/pages/')) {
-            // pages/dashboard.html → ./dashboard.html ya da sadece dashboard.html
-            return href.replace('pages/', '');
-        }
+        if (cur.includes('/admin/')) return '../../' + href;
+        if (cur.includes('/pages/')) return href.replace('pages/', '');
         return href;
     }
 
@@ -98,7 +87,7 @@ const Sidebar = (() => {
         container.innerHTML = `
             <div class="sidebar-header">
                 <span class="sidebar-logo">Zero<em>Step</em></span>
-                <button class="sidebar-close-btn btn-icon" id="sidebar-close" aria-label="Kapat">✕</button>
+                <button class="sidebar-close-btn" id="sidebar-close" aria-label="Kapat">✕</button>
             </div>
             <nav class="sidebar-nav" role="navigation">
                 ${NAV_ITEMS.map(_renderItem).join('')}
@@ -116,7 +105,6 @@ const Sidebar = (() => {
     }
 
     function _bindEvents(container) {
-        // Grup toggle
         container.querySelectorAll('.sidebar-group-toggle').forEach(btn => {
             btn.addEventListener('click', () => {
                 const group = btn.closest('.sidebar-group');
@@ -125,7 +113,6 @@ const Sidebar = (() => {
             });
         });
 
-        // Mobil kapatma
         const closeBtn = container.querySelector('#sidebar-close');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
@@ -134,7 +121,6 @@ const Sidebar = (() => {
         }
     }
 
-    // Okunmamış badge sayılarını çek
     async function _loadBadges() {
         try {
             const notifCount = await Api.get('/notifications/unread-count');
@@ -152,7 +138,6 @@ const Sidebar = (() => {
         });
     }
 
-    // Dışarıdan badge güncellemek için
     function updateBadge(key, count) {
         _setBadge(key, count);
     }

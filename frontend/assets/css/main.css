@@ -1,18 +1,27 @@
 /* CSS custom property'leri — tüm tema buradan yönetilir */
 :root {
-    --clr-bg:          #0d0f14;
-    --clr-surface:     #161b25;
-    --clr-surface-2:   #1e2535;
-    --clr-border:      #2a3347;
-    --clr-border-focus:#3d7aed;
-    --clr-text:        #e8ecf4;
-    --clr-text-muted:  #8896b0;
-    --clr-primary:     #3d7aed;
-    --clr-primary-h:   #5a91f8;
-    --clr-danger:      #e05260;
-    --clr-danger-h:    #f06272;
-    --clr-success:     #2eb87e;
-    --clr-warning:     #e09040;
+    /* Füme Cam Arka Planlar */
+    --clr-bg:          #121214;
+    --clr-surface:     rgba(18, 18, 20, 0.65);
+    --clr-surface-2:   rgba(255, 255, 255, 0.05);
+
+    /* Çerçeveler */
+    --clr-border:      rgba(255, 255, 255, 0.1);
+    --clr-border-focus: rgba(158, 134, 232, 0.5); /* Mor Focus Çerçevesi */
+
+    /* Metinler */
+    --clr-text:        #f3f4f6;
+    --clr-text-muted:  #9ca3af;
+
+    /* YENİ TOZLU MOR TEMASI */
+    --clr-primary:     #9e86e8;
+    --clr-primary-h:   #b4a0ed; /* Hover (Üzerine gelince açılan mor) */
+
+    /* Durum Renkleri */
+    --clr-danger:      #ff4d4d;
+    --clr-danger-h:    #ff6b6b;
+    --clr-success:     #4ade80;
+    --clr-warning:     #fbbf24;
 
     --radius-sm: 6px;
     --radius-md: 10px;
