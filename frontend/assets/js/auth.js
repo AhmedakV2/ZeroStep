@@ -21,7 +21,7 @@ const Auth = (() => {
             username: data.username,
             email: data.email,
             displayName: data.displayName,
-            roles: data.roles,
+            roles: data.roles || [], // roles yoksa boş dizi ata
             passwordChangeRequired: data.passwordChangeRequired,
         };
         Store.setUser(user);
@@ -31,12 +31,18 @@ const Auth = (() => {
     async function logout() {
         try { await Api.post('/auth/logout', {}); } catch { /* sessiz hata */ }
         Store.clear();
+        if (window.ChatWidget && typeof window.ChatWidget.disconnect === 'function') {
+            window.ChatWidget.disconnect();
+        }
         Router.go('/login');
     }
 
     // 401 geldiğinde auth modülü dışından da çağrılabilir
     function forceLogout() {
         Store.clear();
+        if (window.ChatWidget && typeof window.ChatWidget.disconnect === 'function') {
+            window.ChatWidget.disconnect();
+        }
         window.location.hash = '#/login';
     }
 
@@ -46,6 +52,14 @@ const Auth = (() => {
 
         const data = await Api.postPublic('/auth/refresh', { refreshToken });
         Store.setTokens(data.accessToken, data.refreshToken);
+
+        // Refresh token sonrası da user bilgisini güncelleyebiliriz
+        const payload = decodeToken(data.accessToken);
+        const currentUser = Store.getUser();
+        if (payload && currentUser) {
+            currentUser.roles = data.roles || payload.roles || currentUser.roles;
+            Store.setUser(currentUser);
+        }
         return data;
     }
 
@@ -64,7 +78,9 @@ const Auth = (() => {
 
     function hasRole(role) {
         const user = getCurrentUser();
-        if (!user?.roles) return false;
+        // HATA BURADAN KAYNAKLANIYORDU: user null ise çökmesin diye eklendi
+        if (!user || !user.roles || !Array.isArray(user.roles)) return false;
+
         // Backend "ADMIN" döndürüyor, Spring "ROLE_ADMIN" da olabilir
         return user.roles.some(r => r === role || r === `ROLE_${role}`);
     }

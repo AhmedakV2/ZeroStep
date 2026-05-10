@@ -26,14 +26,12 @@ const Api = (() => {
         try {
             res = await fetch(BASE + path, config);
         } catch (networkErr) {
-            // Global Network Hatası Yönetimi (Sunucu kapalıysa)
             if (window.Toast) {
                 Toast.error('Sunucuya bağlanılamadı. İnternet bağlantınızı veya sunucuyu kontrol edin.');
             }
             throw new ApiError(0, 'NETWORK_ERROR', 'Sunucuya bağlanılamadı. (' + networkErr.message + ')');
         }
 
-        // Global 500 Sunucu Hatası Yönetimi
         if (res.status >= 500) {
             if (window.Toast) {
                 Toast.error(`Sunucu tarafında bir hata oluştu (Hata: ${res.status}). Lütfen tekrar deneyin.`);
@@ -63,7 +61,7 @@ const Api = (() => {
 
             _refreshing = true;
             try {
-                const data = await Auth.refreshAccessToken();
+                const data = await Auth.refreshAccessToken(); // Auth.js'de bu fonksiyonun olduğundan emin ol
                 _processQueue(null, data.accessToken);
                 headers['Authorization'] = `Bearer ${data.accessToken}`;
                 res = await fetch(BASE + path, { ...config, headers });
