@@ -46,7 +46,10 @@ body.dashboard-body {
     display: grid;
     grid-template-columns: var(--sidebar-expanded-w) 1fr;
     grid-template-rows: var(--topbar-h) 1fr;
-    grid-template-areas: "sidebar topbar" "sidebar main";
+    /* DEĞİŞİKLİK BURADA: Topbar tüm üst satırı kaplar, Sidebar aşağı geçer */
+    grid-template-areas:
+        "topbar topbar"
+        "sidebar main";
     min-height: 100vh;
     background: transparent;
     transition: grid-template-columns 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -68,9 +71,10 @@ body.dashboard-body {
     flex-direction: column;
     overflow: hidden;
     position: sticky;
+    /* DÜZELTME: Grid zaten aşağı ittiği için burası tekrar 0 olmalı */
     top: 0;
-    height: 100vh;
-    z-index: 100;
+    height: calc(100vh - var(--topbar-h));
+    z-index: 80;
     transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -82,15 +86,14 @@ body.dashboard-body {
 .sidebar-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0 0.875rem;
-    height: var(--topbar-h);
-    border-bottom: 1px solid var(--clr-border);
+    justify-content: flex-end;
+    padding: 0;
+    height: 0; /* Masaüstünde kesinlikle yer kaplamasın */
+    min-height: 0; /* Bunu da ekleyebilirsin, garanti olur */
+    border-bottom: none;
     flex-shrink: 0;
-    gap: 0.5rem;
     overflow: hidden;
 }
-
 /* Logo (link) */
 .sidebar-logo {
     display: flex;
@@ -176,7 +179,7 @@ body.dashboard-body {
 /* ── Nav ──────────────────────────────────────────────── */
 .sidebar-nav {
     flex: 1;
-    padding: 0.6rem 0.5rem;
+    padding: 0 0.5rem 0.6rem 0.5rem;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -493,9 +496,18 @@ body.dashboard-body {
         grid-template-areas: "topbar" "main";
     }
     /* Sidebar mobilde fixed overlay — her zaman full genişlik */
+    .sidebar-header {
+        height: 50px;
+        padding: 0 1rem;
+        border-bottom: 1px solid var(--clr-border);
+    }
     .sidebar {
         position: fixed;
         left: -280px;
+        /* DEĞİŞİKLİK BURADA: Mobilde çekmece mantığı olduğu için tam ekran ve en üstte olmalı */
+        top: 0;
+        height: 100vh;
+        z-index: 200;
         width: var(--sidebar-expanded-w) !important;
         transition: left 0.3s ease;
     }

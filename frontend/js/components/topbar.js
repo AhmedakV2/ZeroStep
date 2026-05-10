@@ -1,6 +1,16 @@
 // Topbar bileşeni; sayfa başlığı, bildirim zili, kullanıcı menüsü
 const Topbar = (() => {
 
+    const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>`;
+    const HAMBURGER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
+
+    function _dashboardHref() {
+        const cur = window.location.pathname;
+        if (cur.includes('/admin/')) return '../../pages/dashboard.html';
+        if (cur.includes('/pages/')) return 'dashboard.html';
+        return 'pages/dashboard.html';
+    }
+
     function render(containerId, pageTitle = '') {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -11,13 +21,17 @@ const Topbar = (() => {
             : '?';
 
         container.innerHTML = `
-            <div class="topbar-left">
-                <button class="topbar-hamburger" id="topbar-hamburger" aria-label="Menüyü aç">
-                    <span class="hamburger-line"></span>
-                    <span class="hamburger-line"></span>
-                    <span class="hamburger-line"></span>
+            <div class="topbar-left" style="display: flex; align-items: center;">
+                
+                <button class="topbar-hamburger" id="topbar-hamburger" aria-label="Menüyü aç" style="background: none; border: none; color: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-right: 16px; padding: 4px;">
+                    ${HAMBURGER_SVG}
                 </button>
-                <h1 class="topbar-title">${Utils.escHtml(pageTitle)}</h1>
+                
+                <a class="topbar-logo" href="${_dashboardHref()}" title="Ana Sayfaya Git" style="display: flex; align-items: center; text-decoration: none; margin-right: 24px;">
+                    <span class="topbar-logo-text" style="font-family: 'Impact', 'Arial Black', sans-serif; font-weight: 900; font-size: 1.7rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--clr-primary, #6a4ec2); line-height: 1; filter: drop-shadow(2.5px 2.5px 0px rgba(0,0,0,1));">ZEROSTEP</span>
+                </a>
+
+                <h1 class="topbar-title" style="margin: 0; padding-left: 16px; border-left: 1px solid rgba(255,255,255,0.1);">${Utils.escHtml(pageTitle)}</h1>
             </div>
             <div class="topbar-right">
                 <button class="topbar-icon-btn" id="notif-btn" aria-label="Bildirimler" title="Bildirimler">
@@ -65,7 +79,23 @@ const Topbar = (() => {
 
     function _bindEvents(container) {
         container.querySelector('#topbar-hamburger')?.addEventListener('click', () => {
-            document.querySelector('.app-shell')?.classList.toggle('sidebar-open');
+            const appShell = document.querySelector('.app-shell');
+
+            if (window.innerWidth <= 768) {
+                appShell?.classList.toggle('sidebar-open');
+            } else {
+                const STORAGE_KEY = 'zs_sidebar_collapsed';
+                const isCollapsed = localStorage.getItem(STORAGE_KEY) === 'true';
+                const newState = !isCollapsed;
+
+                localStorage.setItem(STORAGE_KEY, newState ? 'true' : 'false');
+                appShell?.classList.toggle('sidebar-collapsed', newState);
+
+                const sidebarContainer = document.querySelector('.sidebar') || document.getElementById('sidebar-container');
+                if (sidebarContainer) {
+                    sidebarContainer.classList.toggle('collapsed', newState);
+                }
+            }
         });
 
         container.querySelector('#notif-btn')?.addEventListener('click', () => {
