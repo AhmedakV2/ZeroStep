@@ -1,46 +1,25 @@
-/* ── Kök Değişkenler (Dark Glassmorphism Tema) ──────────────── */
-:root {
-    --clr-bg: #121214; /* Göz yormayan koyu füme/antrasit arka plan */
-    --clr-surface: rgba(18, 18, 20, 0.65); /* Saf siyah yerine koyu gri yüzey */
-    --clr-surface-2: rgba(255, 255, 255, 0.05);
-    --clr-border: rgba(255, 255, 255, 0.1);
-    --clr-border-hover: rgba(255, 255, 255, 0.25);
-    --clr-text: #f3f4f6; /* Tam beyaz yerine çok hafif kırık beyaz (göz yormaması için) */
-    --clr-text-muted: #9ca3af;
+@import url('main.css');
 
-    /* TOZLU MOR TEMASI (Beyaz Buton Sorununu Çözer) */
-    --clr-primary: #9e86e8;
-    --clr-primary-glow: rgba(158, 134, 232, 0.15);
-
-    --clr-danger: #ff4d4d;
-    --clr-success: #4ade80;
-    --clr-warning: #fbbf24;
-    --shadow-md: 0 10px 30px -10px rgba(0,0,0,0.4);
-    --radius-lg: 20px;
-    --radius-md: 14px;
-    --radius-sm: 8px;
-    --font-ui: 'Inter', sans-serif;
-    --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+/* Not: Tema renkleri ve :root değişkenleri sadece main.css içerisinden yönetilmektedir. */
 
 body.dashboard-body {
     background: var(--clr-bg);
     color: var(--clr-text);
-    font-family: var(--font-ui);
+    font-family: var(--font-body);
     overflow-x: hidden;
 }
 
-.font-mono { font-family: 'JetBrains Mono', monospace; }
+.font-mono { font-family: var(--font-ui), monospace; }
 
 /* ── Animasyonlu Arka Plan (Dashboard İçin Özel) ─────────────── */
-.bg-canvas { position: fixed; inset: 0; z-index: 0; background: radial-gradient(ellipse 80% 50% at 20% 40%, rgba(255,255,255,0.03) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 60%, rgba(255,255,255,0.02) 0%, transparent 50%); }
-.bg-grid { position: fixed; inset: 0; z-index: 0; background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px); background-size: 60px 60px; mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 80%); -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 80%); }
-.dots { position: fixed; inset: 0; z-index: 0; background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 24px 24px; mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 80%); pointer-events: none; }
+.bg-canvas { position: fixed; inset: 0; z-index: 0; background: radial-gradient(ellipse 80% 50% at 20% 40%, var(--clr-surface-2) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 60%, var(--clr-surface-2) 0%, transparent 50%); }
+.bg-grid { position: fixed; inset: 0; z-index: 0; background-image: linear-gradient(var(--clr-border) 1px, transparent 1px), linear-gradient(90deg, var(--clr-border) 1px, transparent 1px); background-size: 60px 60px; mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 80%); -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 80%); }
+.dots { position: fixed; inset: 0; z-index: 0; background-image: radial-gradient(var(--clr-surface-2) 1px, transparent 1px); background-size: 24px 24px; mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 80%); pointer-events: none; }
 .parallax-orb { position: fixed; inset: 0; z-index: 0; pointer-events: none; transition: transform 0.2s ease-out; }
-.floating-orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.2; animation: float 20s ease-in-out infinite; }
-.orb-1 { width: 400px; height: 400px; background: rgba(158, 134, 232, 0.1); top: -10%; left: -5%; } /* Orblara hafif mor tonu verildi */
-.orb-2 { width: 300px; height: 300px; background: rgba(255,255,255,0.06); bottom: -5%; right: -5%; animation-delay: -7s; }
-.orb-3 { width: 250px; height: 250px; background: rgba(158, 134, 232, 0.04); top: 40%; right: 20%; animation-delay: -14s; }
+.floating-orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.3; animation: float 20s ease-in-out infinite; }
+.orb-1 { width: 400px; height: 400px; background: rgba(158, 134, 232, 0.15); top: -10%; left: -5%; }
+.orb-2 { width: 300px; height: 300px; background: var(--clr-surface-2); bottom: -5%; right: -5%; animation-delay: -7s; }
+.orb-3 { width: 250px; height: 250px; background: rgba(158, 134, 232, 0.08); top: 40%; right: 20%; animation-delay: -14s; }
 
 @keyframes float {
     0%, 100% { transform: translate(0, 0) scale(1); }
@@ -92,8 +71,8 @@ body.dashboard-body {
 }
 .topbar-title { font-size: 1.1rem; font-weight: 700; color: var(--clr-text); }
 .topbar-right { display: flex; align-items: center; gap: 1rem; }
-.topbar-icon-btn { width: 2.5rem; height: 2.5rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid transparent; background: var(--clr-surface-2); color: var(--clr-text); cursor: pointer; transition: all var(--transition); }
-.topbar-icon-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--clr-border); transform: translateY(-2px); color: var(--clr-primary); }
+.topbar-icon-btn { width: 2.5rem; height: 2.5rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid transparent; background: var(--clr-surface-2); color: var(--clr-text); cursor: pointer; transition: all var(--transition); position: relative; }
+.topbar-icon-btn:hover { background: var(--clr-border); border-color: var(--clr-border); transform: translateY(-2px); color: var(--clr-primary); }
 
 /* ── Main content area ────────────────────────────────── */
 .main-content { grid-area: main; padding: 2rem; overflow-y: auto; background: transparent; }
@@ -103,62 +82,24 @@ body.dashboard-body {
 .stat-card {
     background: var(--clr-surface); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--clr-border); border-radius: var(--radius-md); padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem;
-    box-shadow: var(--shadow-md); transition: all var(--transition); position: relative; overflow: hidden;
+    box-shadow: var(--shadow-sm); transition: all var(--transition); position: relative; overflow: hidden;
 }
-.stat-card:hover { transform: translateY(-5px); border-color: var(--clr-border-hover); box-shadow: 0 15px 35px -10px var(--clr-primary-glow); }
-/* Hover Shine Efekti */
-.stat-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent); transform: skewX(-20deg); transition: 0.5s; }
+.stat-card:hover { transform: translateY(-5px); border-color: var(--clr-border-focus); box-shadow: 0 15px 35px -10px rgba(158, 134, 232, 0.15); }
+.stat-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, var(--clr-surface-2), transparent); transform: skewX(-20deg); transition: 0.5s; }
 .stat-card:hover::before { left: 200%; }
 
 .stat-card-value { font-size: 2rem; font-weight: 800; color: var(--clr-text); line-height: 1; }
 .stat-card-label { font-size: 0.85rem; color: var(--clr-text-muted); font-weight: 500; letter-spacing: .02em; }
-.stat-card-accent-blue  { border-top: 3px solid var(--clr-primary); } /* Mor olarak güncellendi */
+.stat-card-accent-blue  { border-top: 3px solid var(--clr-primary); }
 .stat-card-accent-green { border-top: 3px solid var(--clr-success); }
 .stat-card-accent-red   { border-top: 3px solid var(--clr-danger); }
 .stat-card-accent-orange{ border-top: 3px solid var(--clr-warning); }
-
-/* ── Glass Card & Tablo ───────────────────────────────── */
-.glass-card { background: var(--clr-surface); backdrop-filter: blur(20px); border: 1px solid var(--clr-border); border-radius: var(--radius-md); box-shadow: var(--shadow-md); overflow: hidden; }
-.card-header { padding: 1.5rem; border-bottom: 1px solid var(--clr-border); display: flex; justify-content: space-between; align-items: center; }
-.card-title { font-size: 1.1rem; font-weight: 700; margin: 0; }
-
-.table-wrapper { width: 100%; overflow-x: auto; }
-.data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.data-table th { background: rgba(255, 255, 255, 0.03); padding: 1rem 1.5rem; text-align: left; font-size: 0.8rem; font-weight: 600; color: var(--clr-text-muted); border-bottom: 1px solid var(--clr-border); white-space: nowrap; }
-.data-table td { padding: 1rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--clr-text); vertical-align: middle; transition: background var(--transition); }
-.data-table tbody tr { transition: all 0.2s; }
-.data-table tbody tr:hover { background: rgba(255, 255, 255, 0.06); }
-.data-table tbody tr:last-child td { border-bottom: none; }
-
-/* Status Badges */
-.badge { padding: 0.35rem 0.75rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
-.badge-success { background: rgba(74, 222, 128, 0.15); color: var(--clr-success); border: 1px solid rgba(74, 222, 128, 0.3); }
-.badge-danger { background: rgba(255, 77, 77, 0.15); color: var(--clr-danger); border: 1px solid rgba(255, 77, 77, 0.3); }
-.badge-warning { background: rgba(251, 191, 36, 0.15); color: var(--clr-warning); border: 1px solid rgba(251, 191, 36, 0.3); }
-
-/* Mor rozet düzeltmesi (Eski beyaz rengi mor yaptık) */
-.badge-primary { background: rgba(158, 134, 232, 0.15); color: var(--clr-primary); border: 1px solid rgba(158, 134, 232, 0.3); }
-
-/* Buton (Ghost) */
-.btn-ghost { background: transparent; color: var(--clr-text); border: 1px solid var(--clr-border); padding: 0.5rem 1rem; border-radius: var(--radius-sm); font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all var(--transition); text-decoration: none; display: inline-block; }
-.btn-ghost:hover { background: var(--clr-primary); color: #000; border-color: var(--clr-primary); }
-
-/* Responsive */
-@media (max-width: 1024px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 768px) {
-    .app-shell { grid-template-columns: 1fr; grid-template-areas: "topbar" "main"; }
-    .sidebar { position: fixed; left: -260px; transition: 0.3s; }
-    .app-shell.sidebar-open .sidebar { left: 0; }
-    .main-content { padding: 1rem; }
-    .grid-4 { grid-template-columns: 1fr; }
-}
 
 /* ── Topbar (Üst Menü) Ekstraları ───────────────────────── */
 .topbar-left { display: flex; align-items: center; gap: 1rem; }
 .topbar-hamburger { background: transparent; border: none; cursor: pointer; display: none; flex-direction: column; gap: 5px; padding: 0.5rem; }
 .hamburger-line { width: 24px; height: 2px; background: var(--clr-text); border-radius: 2px; transition: 0.3s; }
 
-.topbar-icon-btn { position: relative; } /* Rozetin buton içinde durması için */
 .topbar-badge { position: absolute; top: -2px; right: -2px; background: var(--clr-danger); color: #fff; font-size: 0.65rem; font-weight: bold; padding: 0.15rem 0.4rem; border-radius: 99px; border: 2px solid var(--clr-surface); }
 
 .topbar-user { display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.4rem 0.8rem; border-radius: var(--radius-sm); transition: background var(--transition); }
@@ -186,10 +127,17 @@ body.dashboard-body {
 .sidebar-group.open .sidebar-chevron { transform: rotate(90deg); }
 .sidebar-badge { background: var(--clr-primary); color: #000; font-size: 0.7rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 99px; margin-left: auto; }
 
-/* Mobil Uyumluluk Güncellemeleri */
+/* ── Responsive ─────────────────────────────────────────── */
 .sidebar-close-btn { display: none; background: transparent; border: none; color: var(--clr-text); font-size: 1.2rem; cursor: pointer; transition: 0.2s; }
 .sidebar-close-btn:hover { color: var(--clr-primary); }
+
+@media (max-width: 1024px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 768px) {
+    .app-shell { grid-template-columns: 1fr; grid-template-areas: "topbar" "main"; }
+    .sidebar { position: fixed; left: -260px; transition: 0.3s; }
+    .app-shell.sidebar-open .sidebar { left: 0; }
+    .main-content { padding: 1rem; }
+    .grid-4 { grid-template-columns: 1fr; }
     .topbar-hamburger { display: flex; }
     .sidebar-close-btn { display: block; }
     .topbar-dropdown { right: 1rem; }

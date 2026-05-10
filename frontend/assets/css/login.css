@@ -1,4 +1,6 @@
-/* Login Page Styles */
+@import url('main.css');
+
+/* Login Page Styles - Local overrides */
 :root {
   --bg: #121214;
   --bg-card: rgba(18, 18, 20, 0.7);
