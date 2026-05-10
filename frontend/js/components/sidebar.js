@@ -1,38 +1,26 @@
 // Sidebar bileşeni; YouTube tarzı açılır/kapanır, SVG ikonlar, rol bazlı menü
 const Sidebar = (() => {
 
-    // Her menü öğesi için özel SVG ikon
     const ICONS = {
         home: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>`,
-
         scenarios: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`,
-
         executions: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>`,
-
         reports: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
-
         schedules: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16.5 14.5"/></svg>`,
-
-        chat: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
-
         announcements: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
-
         admin: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
-
         chevron: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`,
-
         hamburger: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
-
         logo: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>`,
     };
 
+    // "Mesajlar" menüden kaldırıldı; chat widget ile sağ alt köşeye taşındı
     const NAV_ITEMS = [
         { label: 'Ana Sayfa',            href: 'pages/dashboard.html',         iconKey: 'home',          roles: null },
         { label: 'Senaryolar',           href: 'pages/scenarios.html',          iconKey: 'scenarios',     roles: null },
         { label: 'Çalıştırmalar',        href: 'pages/executions.html',         iconKey: 'executions',    roles: null },
         { label: 'Raporlar',             href: 'pages/reports.html',            iconKey: 'reports',       roles: null },
         { label: 'Zamanlanmış Görevler', href: 'pages/schedules.html',          iconKey: 'schedules',     roles: null },
-        { label: 'Mesajlar',             href: 'pages/chat.html',               iconKey: 'chat',          roles: null, badge: 'msg' },
         { label: 'Duyurular',            href: 'pages/announcements.html',      iconKey: 'announcements', roles: null },
         {
             label: 'Yönetim', iconKey: 'admin', roles: ['ADMIN'],
@@ -110,17 +98,12 @@ const Sidebar = (() => {
                 </div>`;
         }
 
-        const badgeHtml = item.badge
-            ? `<span class="sidebar-badge" data-badge="${item.badge}" style="display:none">0</span>`
-            : '';
-
         return `
             <a class="sidebar-item${_isActive(item.href) ? ' active' : ''}"
                href="${_resolveHref(item.href)}"
                title="${item.label}">
                 <span class="sidebar-icon">${svg}</span>
                 <span class="sidebar-label">${item.label}</span>
-                ${badgeHtml}
             </a>`;
     }
 
@@ -180,7 +163,6 @@ const Sidebar = (() => {
             });
         });
 
-        // Mobil overlay kapatma
         document.addEventListener('click', (e) => {
             if (window.innerWidth <= 768) {
                 const appShell = document.querySelector('.app-shell');
@@ -197,9 +179,13 @@ const Sidebar = (() => {
         try {
             const notifCount = await Api.get('/notifications/unread-count');
             _setBadge('notif', notifCount?.count ?? 0);
+            // Mesaj badge'i artık chat widget tarafından yönetiliyor
             const msgCount = await Api.get('/chat/unread-count');
-            _setBadge('msg', msgCount?.count ?? 0);
-        } catch { /* sessiz hata */ }
+            // Widget badge'ini güncelle (widget'in hazır olmasını bekle)
+            if (window.ChatWidget && typeof window.ChatWidget.updateBadge === 'function') {
+                window.ChatWidget.updateBadge(msgCount?.count ?? 0);
+            }
+        } catch (e) { /* sessiz hata */ }
     }
 
     function _setBadge(key, count) {

@@ -13,7 +13,6 @@
 </head>
 <body class="dashboard-body">
 
-<!-- bg-grid ve dots kaldırıldı, sadece yumuşak canvas bırakıldı -->
 <div class="bg-canvas"></div>
 <div class="parallax-orb" id="orb1-wrap"><div class="floating-orb orb-1"></div></div>
 <div class="parallax-orb" id="orb2-wrap"><div class="floating-orb orb-2"></div></div>
@@ -23,7 +22,6 @@
 
 <div class="app-shell relative-z">
     <aside class="sidebar" id="sidebar" role="complementary"></aside>
-
     <header class="topbar" id="topbar" role="banner"></header>
 
     <main class="main-content" id="main-content">
@@ -51,9 +49,6 @@
                 <h3 class="card-title">Son Çalıştırmalar</h3>
                 <a href="executions.html" class="btn btn-ghost btn-sm">Tümünü Gör</a>
             </div>
-            <div id="executions-loading" class="empty-state" style="display:none">
-                <span class="spinner" style="border-color:var(--clr-border);border-top-color:var(--clr-primary);width:1.5rem;height:1.5rem;"></span>
-            </div>
             <div class="table-wrapper" id="executions-table-wrapper">
                 <table class="data-table" id="executions-table">
                     <thead>
@@ -79,6 +74,7 @@
     </main>
 </div>
 
+<!-- Temel scriptler — sıra önemli -->
 <script src="../assets/js/utils.js"></script>
 <script src="../assets/js/store.js"></script>
 <script src="../assets/js/toast.js"></script>
@@ -91,5 +87,9 @@
 <script src="../js/components/modal.js"></script>
 <script src="../js/components/confirm-dialog.js"></script>
 <script src="../js/pages/dashboard.js"></script>
+<!-- Chat widget: SockJS + Stomp + widget (en sona, diğer scriptler hazır olsun) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script src="../assets/js/chat-widget.js"></script>
 </body>
 </html>
