@@ -4,35 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZeroStep — Denetim Günlükleri (Audit)</title>
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <link rel="stylesheet" href="../../assets/css/main.css">
     <script src="../../assets/js/theme-init.js"></script>
     <link rel="stylesheet" href="../../assets/css/components.css">
     <link rel="stylesheet" href="../../assets/css/layout.css">
+    <style>
+        .stagger-item {
+            opacity: 0;
+            transform: translateY(18px);
+            animation: pageItemFadeUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .delay-1 { animation-delay: 0.08s; }
+        .delay-2 { animation-delay: 0.16s; }
+        .delay-3 { animation-delay: 0.24s; }
+        .delay-4 { animation-delay: 0.32s; }
+        @keyframes pageItemFadeUp { to { opacity: 1; transform: translateY(0); } }
+
+        .page-bg {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background:
+                    radial-gradient(ellipse 70% 50% at 15% 30%, rgba(158, 134, 232, 0.05) 0%, transparent 60%),
+                    radial-gradient(ellipse 50% 40% at 85% 70%, rgba(158, 134, 232, 0.03) 0%, transparent 55%);
+        }
+        .page-content { position: relative; z-index: 1; }
+    </style>
 </head>
 <body>
+<div class="page-bg"></div>
 <div id="toast-container"></div>
 
 <div class="app-shell">
-    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar" role="complementary"></aside>
-    <!-- Topbar -->
     <header class="topbar" id="topbar" role="banner"></header>
 
-    <main class="main-content">
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+    <main class="main-content page-content">
+        <!-- Başlık -->
+        <div class="stagger-item delay-1" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
             <h2 class="page-title" style="margin: 0;">Denetim Günlükleri</h2>
-            <button class="btn btn-outline" id="export-audit-btn">
+            <button class="btn btn-ghost" id="export-audit-btn">
                 <i class="fas fa-download"></i> Dışa Aktar
             </button>
         </div>
 
-        <div class="card filter-bar mt-4">
+        <!-- Filtreler -->
+        <div class="card filter-bar mt-4 stagger-item delay-2">
             <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
                 <div class="form-group mb-0" style="flex: 1; min-width: 200px;">
                     <input type="text" class="form-input" id="audit-search" placeholder="Kullanıcı adı veya işlem ara...">
@@ -55,7 +73,8 @@
             </div>
         </div>
 
-        <div class="card p-0 mt-4">
+        <!-- Tablo -->
+        <div class="card p-0 mt-4 stagger-item delay-3">
             <div class="table-wrapper">
                 <table class="data-table">
                     <thead>
@@ -76,7 +95,7 @@
             </div>
         </div>
 
-        <div id="pagination-container" class="mt-4"></div>
+        <div id="pagination-container" class="mt-4 stagger-item delay-4"></div>
     </main>
 </div>
 

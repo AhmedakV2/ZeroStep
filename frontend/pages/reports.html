@@ -11,6 +11,25 @@
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/layout.css">
     <style>
+        .stagger-item {
+            opacity: 0;
+            transform: translateY(18px);
+            animation: pageItemFadeUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .delay-1 { animation-delay: 0.08s; }
+        .delay-2 { animation-delay: 0.16s; }
+        .delay-3 { animation-delay: 0.24s; }
+        .delay-4 { animation-delay: 0.32s; }
+        @keyframes pageItemFadeUp { to { opacity: 1; transform: translateY(0); } }
+
+        .page-bg {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background:
+                    radial-gradient(ellipse 70% 50% at 15% 30%, rgba(158, 134, 232, 0.05) 0%, transparent 60%),
+                    radial-gradient(ellipse 50% 40% at 85% 70%, rgba(158, 134, 232, 0.03) 0%, transparent 55%);
+        }
+        .page-content { position: relative; z-index: 1; }
+
         .tab-btn { background: none; border: none; padding: 1rem; cursor: pointer; color: var(--clr-text-muted); border-bottom: 2px solid transparent; transition: all 0.2s; font-weight: 600; }
         .tab-btn.active { color: var(--clr-primary); border-bottom-color: var(--clr-primary); }
         .tab-panel { display: none; }
@@ -22,22 +41,23 @@
     </style>
 </head>
 <body>
+<div class="page-bg"></div>
 <div id="toast-container"></div>
 
 <div class="app-shell">
     <aside class="sidebar" id="sidebar"></aside>
     <header class="topbar" id="topbar"></header>
-    <main class="main-content">
+    <main class="main-content page-content">
         <div style="padding: 1.5rem 2rem;">
-            <!-- Sekmeler -->
-            <div class="premium-card" style="border-radius: 0; margin-bottom: 0; display: flex; border-bottom: 1px solid var(--clr-border);">
+            <!-- Sekme bar -->
+            <div class="stagger-item delay-1 premium-card" style="border-radius: 0; margin-bottom: 0; display: flex; border-bottom: 1px solid var(--clr-border);">
                 <button class="tab-btn active" onclick="switchTab('executions', event)">Çalıştırma Listesi</button>
                 <button class="tab-btn" onclick="switchTab('scenarios', event)">Senaryo Özeti</button>
             </div>
 
-            <!-- SEKME 1: ÇALIŞT­IRMA LİSTESİ -->
+            <!-- SEKME 1 -->
             <div id="tab-executions" class="tab-panel active">
-                <div class="card" style="padding: 1.5rem; margin-top: 1.5rem;">
+                <div class="card stagger-item delay-2" style="padding: 1.5rem; margin-top: 1.5rem;">
                     <h3 style="font-size: 1rem; font-weight: 700; color: var(--clr-text); margin-bottom: 1rem;">Filtreler</h3>
                     <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0;">
                         <div style="flex: 1; min-width: 150px;">
@@ -52,26 +72,26 @@
                     </div>
                 </div>
 
-                <div class="card" style="padding: 0; overflow: hidden; margin-top: 1.5rem;">
+                <div class="card stagger-item delay-3" style="padding: 0; overflow: hidden; margin-top: 1.5rem;">
                     <div class="table-wrapper">
                         <table class="data-table">
                             <thead><tr><th>Senaryo</th><th>Durum</th><th>Süre</th><th>Adımlar</th><th>Tarih</th></tr></thead>
                             <tbody id="executions-tbody">
-                                <tr><td colspan="5">
-                                    <div class="empty-state">
-                                        <span class="empty-state-icon">▶</span>
-                                        <p class="empty-state-msg">Yükleniyor…</p>
-                                    </div>
-                                </td></tr>
+                            <tr><td colspan="5">
+                                <div class="empty-state">
+                                    <span class="empty-state-icon">▶</span>
+                                    <p class="empty-state-msg">Yükleniyor…</p>
+                                </div>
+                            </td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- SEKME 2: SENARYO ÖZETİ -->
+            <!-- SEKME 2 -->
             <div id="tab-scenarios" class="tab-panel">
-                <div class="premium-card" style="margin-top: 1.5rem;">
+                <div class="premium-card stagger-item delay-2" style="margin-top: 1.5rem;">
                     <label style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); display: block; margin-bottom: 0.5rem;">Senaryo Seç</label>
                     <select id="select-scenario" class="form-input">
                         <option value="">— Seçin —</option>
@@ -79,7 +99,7 @@
                 </div>
 
                 <div id="scenario-summary" style="display: none;">
-                    <div class="premium-card" style="margin-top: 1.5rem;">
+                    <div class="premium-card stagger-item delay-3" style="margin-top: 1.5rem;">
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
                             <div>
                                 <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted);">Toplam Çalıştırma</div>
@@ -94,7 +114,6 @@
                                 <div style="font-size: 1.5rem; font-weight: 700; color: var(--clr-primary);" id="sum-pass-rate">—</div>
                             </div>
                         </div>
-
                         <div style="margin-top: 1.5rem;">
                             <div style="font-size: 0.75rem; font-weight: 600; color: var(--clr-text-muted); margin-bottom: 0.5rem;">Başarı %</div>
                             <div style="width: 100%; height: 24px; background: var(--clr-surface-2); border-radius: 4px; overflow: hidden;">
@@ -105,7 +124,7 @@
                         </div>
                     </div>
 
-                    <div class="premium-card" style="margin-top: 1.5rem;">
+                    <div class="premium-card stagger-item delay-4" style="margin-top: 1.5rem;">
                         <h3 style="margin-bottom: 1rem; font-size: 0.95rem; color: var(--clr-text);">Son 10 Çalıştırma</h3>
                         <div id="last-ten-grid" style="display: flex; flex-wrap: wrap;"></div>
                     </div>

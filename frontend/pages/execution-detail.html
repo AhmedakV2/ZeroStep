@@ -11,205 +11,99 @@
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/layout.css">
     <style>
-        .exec-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-top: 1rem;
+        /* Sayfa giriş animasyonları */
+        .stagger-item {
+            opacity: 0;
+            transform: translateY(18px);
+            animation: pageItemFadeUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        .exec-stats {
-            display: flex;
-            gap: 1.5rem;
-            flex-wrap: wrap;
-            margin-bottom: 0.25rem;
-        }
-        .stat {
-            display: flex;
-            flex-direction: column;
-            gap: 0.2rem;
-        }
-        .stat-label {
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: var(--clr-text-muted);
-            letter-spacing: .04em;
-        }
-        .stat-value {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--clr-text);
-        }
+        .delay-1 { animation-delay: 0.08s; }
+        .delay-2 { animation-delay: 0.16s; }
+        .delay-3 { animation-delay: 0.24s; }
+        .delay-4 { animation-delay: 0.32s; }
+        @keyframes pageItemFadeUp { to { opacity: 1; transform: translateY(0); } }
 
-        /* Adım listesi */
-        .steps-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            max-height: 480px;
-            overflow-y: auto;
+        .page-bg {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background:
+                    radial-gradient(ellipse 70% 50% at 15% 30%, rgba(158, 134, 232, 0.05) 0%, transparent 60%),
+                    radial-gradient(ellipse 50% 40% at 85% 70%, rgba(158, 134, 232, 0.03) 0%, transparent 55%);
         }
+        .page-content { position: relative; z-index: 1; }
+
+        .exec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; }
+        .exec-stats { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 0.25rem; }
+        .stat { display: flex; flex-direction: column; gap: 0.2rem; }
+        .stat-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); letter-spacing: .04em; }
+        .stat-value { font-size: 1rem; font-weight: 600; color: var(--clr-text); }
+        .steps-list { list-style: none; padding: 0; margin: 0; max-height: 480px; overflow-y: auto; }
         .steps-list::-webkit-scrollbar { width: 4px; }
         .steps-list::-webkit-scrollbar-thumb { background: var(--clr-border); border-radius: 2px; }
-
-        .step-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.6rem;
-            padding: 0.6rem 0.875rem;
-            border-bottom: 1px solid var(--clr-border);
-            transition: background var(--transition);
-        }
+        .step-item { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem 0.875rem; border-bottom: 1px solid var(--clr-border); transition: background var(--transition); }
         .step-item:last-child { border-bottom: none; }
         .step-item:hover { background: var(--clr-surface-2); }
-
-        /* Log paneli */
-        .log-panel {
-            background: #0a0c10;
-            border-radius: var(--radius-sm);
-            padding: 0.75rem;
-            font-family: 'IBM Plex Mono', 'Consolas', monospace;
-            height: 460px;
-            overflow-y: auto;
-            border: 1px solid var(--clr-border);
-        }
+        .log-panel { background: #0a0c10; border-radius: var(--radius-sm); padding: 0.75rem; font-family: 'IBM Plex Mono', 'Consolas', monospace; height: 460px; overflow-y: auto; border: 1px solid var(--clr-border); }
         .log-panel::-webkit-scrollbar { width: 4px; }
         .log-panel::-webkit-scrollbar-thumb { background: var(--clr-border); border-radius: 2px; }
-
-        /* SSE durum göstergesi */
-        .sse-status-bar {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            font-size: 0.72rem;
-            color: var(--clr-text-muted);
-        }
-        .sse-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #616161;
-            flex-shrink: 0;
-            transition: background 0.3s;
-        }
-        @keyframes pulse-green {
-            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(76,175,80,.4); }
-            50%       { opacity: .7; box-shadow: 0 0 0 4px rgba(76,175,80,0); }
-        }
-
-        /* Kart */
-        .detail-card {
-            background: var(--clr-surface);
-            border: 1px solid var(--clr-border);
-            border-radius: var(--radius-md);
-            padding: 1.25rem;
-            box-shadow: var(--shadow-sm);
-        }
-        .detail-card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.875rem;
-            padding-bottom: 0.6rem;
-            border-bottom: 1px solid var(--clr-border);
-        }
-        .detail-card-title {
-            font-size: 0.88rem;
-            font-weight: 700;
-            color: var(--clr-text);
-        }
-
-        /* İptal butonu için ipucu */
-        #exec-id-display {
-            font-family: var(--font-ui);
-            font-size: 0.72rem;
-            color: var(--clr-text-muted);
-            margin-top: 0.2rem;
-            word-break: break-all;
-        }
-
-        @media (max-width: 900px) {
-            .exec-grid { grid-template-columns: 1fr; }
-        }
+        .sse-status-bar { display: flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; color: var(--clr-text-muted); }
+        .sse-dot { width: 7px; height: 7px; border-radius: 50%; background: #616161; flex-shrink: 0; transition: background 0.3s; }
+        @keyframes pulse-green { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(76,175,80,.4); } 50% { opacity: .7; box-shadow: 0 0 0 4px rgba(76,175,80,0); } }
+        .detail-card { background: var(--clr-surface); border: 1px solid var(--clr-border); border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); }
+        .detail-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.875rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--clr-border); }
+        .detail-card-title { font-size: 0.88rem; font-weight: 700; color: var(--clr-text); }
+        #exec-id-display { font-family: var(--font-ui); font-size: 0.72rem; color: var(--clr-text-muted); margin-top: 0.2rem; word-break: break-all; }
+        @media (max-width: 900px) { .exec-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
+<div class="page-bg"></div>
 <div id="toast-container"></div>
 
 <div class="app-shell">
     <aside class="sidebar" id="sidebar"></aside>
     <header class="topbar" id="topbar"></header>
 
-    <main class="main-content">
+    <main class="main-content page-content">
         <div style="padding: 1.5rem 2rem;">
-
-            <!-- Başlık + aksiyonlar -->
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;gap:1rem;">
+            <!-- Başlık -->
+            <div class="stagger-item delay-1" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;gap:1rem;">
                 <div style="min-width:0;">
-                    <h2 id="exec-title"
-                        style="font-size:1.25rem;font-weight:700;color:var(--clr-text);
-                               white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                        Yükleniyor...
-                    </h2>
-                    <!-- ID JS tarafından doldurulur -->
+                    <h2 id="exec-title" style="font-size:1.25rem;font-weight:700;color:var(--clr-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Yükleniyor...</h2>
                     <div id="exec-id-display"></div>
                 </div>
                 <div style="display:flex;gap:.5rem;flex-shrink:0;">
                     <button id="btn-pdf"    class="btn btn-ghost btn-sm">PDF</button>
                     <button id="btn-excel"  class="btn btn-ghost btn-sm">Excel</button>
-                    <button id="btn-cancel" class="btn btn-danger btn-sm" style="display:none;">
-                        ✕ İptal Et
-                    </button>
+                    <button id="btn-cancel" class="btn btn-danger btn-sm" style="display:none;">✕ İptal Et</button>
                 </div>
             </div>
 
             <!-- Özet istatistikler -->
-            <div class="detail-card" style="margin-bottom:1.25rem;">
+            <div class="detail-card stagger-item delay-2" style="margin-bottom:1.25rem;">
                 <div class="exec-stats">
-                    <div class="stat">
-                        <span class="stat-label">Durum</span>
-                        <span class="stat-value" id="stat-status">—</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Tetikleyen</span>
-                        <span class="stat-value" id="stat-trigger" style="font-size:.9rem;">—</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Başlangıç</span>
-                        <span class="stat-value" id="stat-started" style="font-size:.9rem;">—</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Süre</span>
-                        <span class="stat-value" id="stat-duration">—</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Başarı</span>
-                        <span class="stat-value" id="stat-success">—</span>
-                    </div>
+                    <div class="stat"><span class="stat-label">Durum</span><span class="stat-value" id="stat-status">—</span></div>
+                    <div class="stat"><span class="stat-label">Tetikleyen</span><span class="stat-value" id="stat-trigger" style="font-size:.9rem;">—</span></div>
+                    <div class="stat"><span class="stat-label">Başlangıç</span><span class="stat-value" id="stat-started" style="font-size:.9rem;">—</span></div>
+                    <div class="stat"><span class="stat-label">Süre</span><span class="stat-value" id="stat-duration">—</span></div>
+                    <div class="stat"><span class="stat-label">Başarı</span><span class="stat-value" id="stat-success">—</span></div>
                 </div>
             </div>
 
-            <!-- Grid: adımlar + loglar -->
+            <!-- Adımlar + Loglar grid -->
             <div class="exec-grid">
-
-                <!-- SOL: Adım Sonuçları -->
-                <div class="detail-card">
+                <div class="detail-card stagger-item delay-3">
                     <div class="detail-card-header">
                         <span class="detail-card-title">Adım Sonuçları</span>
                         <span id="step-count" style="font-size:.72rem;color:var(--clr-text-muted);"></span>
                     </div>
                     <ul class="steps-list" id="steps-list">
                         <li style="padding:2rem;text-align:center;color:var(--clr-text-muted);">
-                            <span class="spinner"
-                                  style="width:1rem;height:1rem;display:inline-block;
-                                         border-color:var(--clr-border);
-                                         border-top-color:var(--clr-primary);"></span>
+                            <span class="spinner" style="width:1rem;height:1rem;display:inline-block;border-color:var(--clr-border);border-top-color:var(--clr-primary);"></span>
                         </li>
                     </ul>
                 </div>
 
-                <!-- SAĞ: Canlı Log -->
-                <div class="detail-card">
+                <div class="detail-card stagger-item delay-4">
                     <div class="detail-card-header">
                         <span class="detail-card-title">Canlı Loglar</span>
                         <div class="sse-status-bar">
@@ -217,11 +111,8 @@
                             <span id="sse-label">—</span>
                         </div>
                     </div>
-                    <div class="log-panel" id="log-panel">
-                        <!-- JS tarafından doldurulur -->
-                    </div>
+                    <div class="log-panel" id="log-panel"></div>
                 </div>
-
             </div>
         </div>
     </main>
