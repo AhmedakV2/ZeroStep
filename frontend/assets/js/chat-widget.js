@@ -191,9 +191,11 @@
         isOpen = true;
         document.getElementById('cw-panel').classList.add('cw-open');
 
-        // Sadece oturum varsa verileri çek ve WebSocket'e bağlan
         if (window.Store && window.Api && Store.getAccessToken()) {
             if (!me) me = (window.Auth && Auth.getCurrentUser) ? Auth.getCurrentUser() : Store.getUser();
+
+            // Log ekleyerek panelin açılışını izleyelim
+            console.log("ChatWidget: Panel açıldı. Mevcut konuşma sayısı:", conversations.length);
 
             if (!conversations.length) loadConversations();
             connectWS();
@@ -221,7 +223,6 @@
 
     function showChat(conv) {
         view = 'chat';
-        // DTO Töleransı
         var other = conv.participant || conv.otherUser || conv.targetUser || {};
         var displayName = other.displayName || other.firstName || other.username || 'Konuşma';
 
@@ -235,47 +236,62 @@
     // ── Konuşmalar ─────────────────────────────────────────
     function loadConversations() {
         if(!window.Api) return;
+
+        console.log("ChatWidget: Konuşmalar API'den çekiliyor...");
+
         Api.get('/chat/conversations', { size: 50, sort: 'lastMessageAt,desc' }).then(function(raw) {
+            console.log("ChatWidget: Konuşmalar Başarıyla Çekildi:", raw);
+
             conversations = raw && raw.content ? raw.content : (Array.isArray(raw) ? raw : []);
             renderConvList('');
         }).catch(function(err) {
-            document.getElementById('cw-conv-list').innerHTML = '<div class="cw-empty"><span>Yüklenemedi:<br><small>' + esc(err.message || '') + '</small></span></div>';
+            console.error("ChatWidget: Konuşma Listesi Hatası:", err);
+            document.getElementById('cw-conv-list').innerHTML = '<div class="cw-empty"><span>Yüklenemedi:<br><small style="color:#ff4d4d">' + esc(err.message || 'API Hatası') + '</small></span></div>';
         });
     }
 
     function renderConvList(filter) {
+        var container = document.getElementById('cw-conv-list');
+        if (!container) return;
+
         var list = filter ? conversations.filter(function(c) {
             var other = c.participant || c.otherUser || c.targetUser || {};
             var name = ((other.username || other.displayName)) || ''.toLowerCase();
             return name.indexOf(filter) !== -1 || ((c.lastMessagePreview || '').toLowerCase().indexOf(filter) !== -1);
         }) : conversations;
 
-        var container = document.getElementById('cw-conv-list');
         if (!list.length) {
             container.innerHTML = '<div class="cw-empty"><span class="cw-empty-ico">&#9672;</span><span class="cw-empty-txt">' + (filter ? 'Sonuç bulunamadı' : 'Henüz konuşma yok') + '</span></div>';
             return;
         }
 
-        container.innerHTML = list.map(function(c) {
-            var other   = c.participant || c.otherUser || c.targetUser || {};
-            var display = other.displayName || other.firstName || other.username || '—';
-            var uname   = other.username || 'unknown';
-            var ini     = initials(display);
-            var col     = avatarColor(uname);
-            var time    = c.lastMessageAt ? relTime(c.lastMessageAt) : '';
-            var cid     = c.publicId || c.id;
-            var active  = cid === activeConvId ? ' cw-active' : '';
-            return '<div class="cw-conv' + active + '" data-id="' + esc(cid) + '">' +
-                '<div class="cw-av" style="' + col + '">' + ini + '</div>' +
-                '<div class="cw-ci">' +
-                '<div class="cw-cn">' + esc(display) + '</div>' +
-                '<div class="cw-cp">' + esc(c.lastMessagePreview || '...') + '</div>' +
-                '</div><span class="cw-ct">' + time + '</span></div>';
-        }).join('');
+        try {
+            container.innerHTML = list.map(function(c) {
+                if(!c) return '';
+                var other   = c.participant || c.otherUser || c.targetUser || {};
+                var display = other.displayName || other.firstName || other.username || 'Bilinmeyen';
+                var uname   = other.username || '';
+                var ini     = initials(display);
+                var col     = avatarColor(uname);
+                var time    = c.lastMessageAt ? relTime(c.lastMessageAt) : '';
+                var cid     = c.publicId || c.id;
+                var active  = cid === activeConvId ? ' cw-active' : '';
 
-        container.querySelectorAll('.cw-conv[data-id]').forEach(function(el) {
-            el.addEventListener('click', function() { openConv(el.dataset.id); });
-        });
+                return '<div class="cw-conv' + active + '" data-id="' + esc(cid) + '">' +
+                    '<div class="cw-av" style="' + col + '">' + esc(ini) + '</div>' +
+                    '<div class="cw-ci">' +
+                    '<div class="cw-cn">' + esc(display) + '</div>' +
+                    '<div class="cw-cp">' + esc(c.lastMessagePreview || '...') + '</div>' +
+                    '</div><span class="cw-ct">' + esc(time) + '</span></div>';
+            }).join('');
+
+            container.querySelectorAll('.cw-conv[data-id]').forEach(function(el) {
+                el.addEventListener('click', function() { openConv(el.dataset.id); });
+            });
+        } catch (e) {
+            console.error("ChatWidget: renderConvList sırasında JavaScript hatası:", e);
+            container.innerHTML = '<div class="cw-empty"><span>Liste Çizilemedi:<br><small>' + esc(e.message) + '</small></span></div>';
+        }
     }
 
     // ── Konuşma Aç ─────────────────────────────────────────
@@ -296,18 +312,18 @@
         if (msgLoading || !activeConvId || !window.Api) return;
         msgLoading = true;
 
-        // Paginaton Toleransı: desc ile çekip arayüzde alt alta doğru basmak için reverse yapıyoruz
         Api.get('/chat/conversations/' + activeConvId + '/messages', { page: msgPage, size: 25, sort: 'sentAt,desc' }).then(function(raw) {
             var items    = raw && raw.content ? raw.content : (Array.isArray(raw) ? raw : []);
             var pages    = raw && raw.totalPages ? raw.totalPages : 1;
             msgHasMore   = msgPage + 1 < pages;
 
-            // Sıralamayı eski -> yeni olarak çevir
+            // Sıralamayı eski -> yeni olarak çeviriyoruz (Tarihe göre alttan yukarı dizilim)
             items.reverse();
 
             renderMsgs(items, scrollBottom);
             msgPage++;
         }).catch(function(err) {
+            console.error("ChatWidget: Mesaj Listesi Hatası:", err);
             document.getElementById('cw-msgs').innerHTML = '<div class="cw-empty"><span>Mesajlar yüklenemedi:<br><small>' + esc(err.message || '') + '</small></span></div>';
         }).finally(function() { msgLoading = false; });
     }
@@ -325,21 +341,27 @@
 
         var lastDate = null;
         var frag = document.createDocumentFragment();
-        items.forEach(function(msg) {
-            var d = dateSep(msg.sentAt);
-            if (d !== lastDate) {
-                var sep = document.createElement('div');
-                sep.className = 'cw-dsep';
-                sep.textContent = d;
-                frag.appendChild(sep);
-                lastDate = d;
-            }
-            frag.appendChild(buildMsg(msg));
-        });
 
-        if (isFirst) { list.appendChild(frag); }
-        else { list.insertBefore(frag, list.firstChild); list.scrollTop = list.scrollHeight - prevH; }
-        if (scrollBottom) list.scrollTop = list.scrollHeight;
+        try {
+            items.forEach(function(msg) {
+                if(!msg) return;
+                var d = dateSep(msg.sentAt);
+                if (d !== lastDate) {
+                    var sep = document.createElement('div');
+                    sep.className = 'cw-dsep';
+                    sep.textContent = d;
+                    frag.appendChild(sep);
+                    lastDate = d;
+                }
+                frag.appendChild(buildMsg(msg));
+            });
+
+            if (isFirst) { list.appendChild(frag); }
+            else { list.insertBefore(frag, list.firstChild); list.scrollTop = list.scrollHeight - prevH; }
+            if (scrollBottom) list.scrollTop = list.scrollHeight;
+        } catch(e) {
+            console.error("ChatWidget: renderMsgs sırasında JavaScript hatası:", e);
+        }
     }
 
     function buildMsg(msg) {
@@ -384,6 +406,7 @@
             if (el) el.replaceWith(buildMsg(real));
             loadConversations();
         }).catch(function(err) {
+            console.error("ChatWidget: Mesaj gönderme hatası:", err);
             var el = document.querySelector('[data-id="' + tempId + '"]');
             if (el) el.remove();
             if (window.Toast) Toast.error('Gönderilemedi: ' + (err.message || ''));
@@ -437,15 +460,21 @@
                 var q = e.target.value.trim();
                 if (q.length < 2) { document.getElementById('cwm-r').innerHTML = ''; return; }
 
+                // NOT: Backend sadece /admin/users aramasına izin veriyor. Admin değilsek bu 403 (Yetki Hatası) fırlatacaktır.
                 Api.get('/admin/users', { search: q, size: 10 }).then(function(raw) {
                     var items = (raw && raw.content ? raw.content : (Array.isArray(raw) ? raw : [])).filter(function(u) { return !me || u.username !== me.username; });
                     var r = document.getElementById('cwm-r');
                     if (!items.length) { r.innerHTML = '<div style="font-size:.78rem;color:var(--clr-text-muted);padding:.5rem;">Bulunamadı</div>'; return; }
+
                     r.innerHTML = '<div class="cw-ures">' + items.map(function(u) {
                         var uid = u.publicId || u.id;
-                        var display = u.displayName || u.firstName || u.username;
-                        return '<div class="cw-urow" data-uid="' + esc(uid) + '"><div class="cw-av" style="' + avatarColor(u.username) + ';width:1.5rem;height:1.5rem;font-size:.62rem;">' + initials(display) + '</div><div><div style="font-weight:600;font-size:.82rem;">' + esc(display) + '</div><div style="font-size:.7rem;color:var(--clr-text-muted);">@' + esc(u.username) + '</div></div></div>';
+                        // AdminUserResponse'dan firstName lastName gelir.
+                        var fname = u.firstName ? u.firstName + (u.lastName ? ' ' + u.lastName : '') : '';
+                        var display = u.displayName || fname || u.username || 'Bilinmeyen Kullanıcı';
+
+                        return '<div class="cw-urow" data-uid="' + esc(uid) + '"><div class="cw-av" style="' + avatarColor(u.username) + ';width:1.5rem;height:1.5rem;font-size:.62rem;">' + esc(initials(display)) + '</div><div><div style="font-weight:600;font-size:.82rem;">' + esc(display) + '</div><div style="font-size:.7rem;color:var(--clr-text-muted);">@' + esc(u.username) + '</div></div></div>';
                     }).join('') + '</div>';
+
                     r.querySelectorAll('.cw-urow').forEach(function(row) {
                         row.addEventListener('click', function() {
                             r.querySelectorAll('.cw-urow').forEach(function(x) { x.style.background = ''; });
@@ -454,7 +483,12 @@
                         });
                     });
                 }).catch(function(err) {
-                    document.getElementById('cwm-r').innerHTML = '<div style="font-size:.78rem;color:#ff4d4d;padding:.5rem;">Arama hatası: ' + esc(err.message || 'Yetki yok') + '</div>';
+                    console.error("ChatWidget: Kullanıcı arama hatası:", err);
+                    var errMsg = err.message || '';
+                    if(errMsg.toLowerCase().includes('forbidden') || errMsg.includes('403') || errMsg.toLowerCase().includes('yetki')) {
+                        errMsg = 'Kullanıcı araması sadece Adminler içindir.';
+                    }
+                    document.getElementById('cwm-r').innerHTML = '<div style="font-size:.78rem;color:#ff4d4d;padding:.5rem;text-align:center;">' + esc(errMsg) + '</div>';
                 });
             }, 350));
             setTimeout(function() { si.focus(); }, 80);
@@ -469,6 +503,7 @@
             if (!isOpen) open();
             openConv(conv.publicId || conv.id);
         }).catch(function(err) {
+            console.error("ChatWidget: Konuşma başlatılamadı:", err);
             if (window.Toast) Toast.error('Başlatılamadı: ' + (err.message || ''));
         });
     }
@@ -477,7 +512,7 @@
     function connectWS() {
         if (wsConnected) return;
         if (typeof SockJS === 'undefined' || typeof Stomp === 'undefined') {
-            console.error("ChatWidget: SockJS veya Stomp.js yüklenmemiş!");
+            console.warn("ChatWidget: SockJS veya Stomp.js yüklenmemiş!");
             return;
         }
         var token = Store.getAccessToken();
@@ -495,13 +530,13 @@
                     try { handleIncoming(JSON.parse(msg.body)); } catch (e) {}
                 });
             }, function(error) {
-                console.warn("WebSocket Bağlantı Hatası:", error);
+                console.warn("ChatWidget: WebSocket Bağlantı Koptu:", error);
                 wsConnected = false;
                 setWsDot(false);
                 setTimeout(connectWS, 10000);
             });
         } catch (e) {
-            console.error("WebSocket init hatası:", e);
+            console.error("ChatWidget: WebSocket init hatası:", e);
         }
     }
 
@@ -531,23 +566,26 @@
         else { b.classList.add('cw-hidden'); }
     }
 
-    // ── Yardımcılar ────────────────────────────────────────
+    // ── Yardımcılar (Güvenlik Kontrollü) ───────────────────
     function initials(name) {
-        if (!name) return '?';
-        var p = name.trim().split(/\s+/);
-        return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+        var str = String(name || '').trim();
+        if (!str || str === 'undefined' || str === 'null') return '?';
+        var p = str.split(/\s+/);
+        return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : str.slice(0, 2).toUpperCase();
     }
 
     function avatarColor(username) {
+        var str = String(username || '');
         var colors = ['#3d7aed','#2eb87e','#e09040','#e05260','#8b5cf6','#06b6d4','#f59e0b','#10b981'];
         var hash = 0;
-        for (var i = 0; i < (username || '').length; i++) hash = (hash * 31 + username.charCodeAt(i)) >>> 0;
+        for (var i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
         return 'background:' + colors[hash % colors.length] + ';color:#fff;';
     }
 
     function relTime(iso) {
         if (!iso) return '';
         var diff = Date.now() - new Date(iso).getTime();
+        if(isNaN(diff)) return '';
         var min  = Math.floor(diff / 60000);
         if (min < 1)  return 'şimdi';
         if (min < 60) return min + 'dk';
@@ -559,6 +597,7 @@
     function dateSep(iso) {
         if (!iso) return '';
         var d = new Date(iso), n = new Date(), y = new Date(n);
+        if(isNaN(d.getTime())) return '';
         y.setDate(y.getDate() - 1);
         if (d.toDateString() === n.toDateString()) return 'Bugün';
         if (d.toDateString() === y.toDateString()) return 'Dün';
@@ -581,29 +620,30 @@
         if (initialized) return;
         initialized = true;
 
-        // Tasarımın DOM'a eklenmesi
-        injectStyles();
-        buildDOM();
+        try {
+            injectStyles();
+            buildDOM();
 
-        // Eğer kullanıcı giriş yapmışsa arka plan API çağrılarını yap
-        if (window.Store && window.Api && Store.getAccessToken()) {
-            me = (window.Auth && Auth.getCurrentUser) ? Auth.getCurrentUser() : Store.getUser();
+            if (window.Store && window.Api && Store.getAccessToken()) {
+                me = (window.Auth && Auth.getCurrentUser) ? Auth.getCurrentUser() : Store.getUser();
 
-            Api.get('/chat/unread-count').then(function(r) {
-                var count = r && r.unreadCount !== undefined ? r.unreadCount : (r && r.count !== undefined ? r.count : 0);
-                updateBadge(count);
-            }).catch(function() {});
+                Api.get('/chat/unread-count').then(function(r) {
+                    var count = r && r.unreadCount !== undefined ? r.unreadCount : (r && r.count !== undefined ? r.count : 0);
+                    updateBadge(count);
+                }).catch(function() {});
 
-            window.addEventListener('beforeunload', function() {
-                if (stompClient && stompClient.connected) stompClient.disconnect();
-            });
+                window.addEventListener('beforeunload', function() {
+                    if (stompClient && stompClient.connected) stompClient.disconnect();
+                });
+            }
+        } catch (e) {
+            console.error("ChatWidget: Kritik Init Hatası!", e);
         }
     }
 
     // Global erişim
     window.ChatWidget = { init: init, toggle: toggle, open: open, close: close, updateBadge: updateBadge };
 
-    // Otomatik başlat
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
