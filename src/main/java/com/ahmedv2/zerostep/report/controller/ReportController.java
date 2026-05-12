@@ -1,4 +1,3 @@
-// src/main/java/com/ahmedv2/zerostep/report/controller/ReportController.java
 package com.ahmedv2.zerostep.report.controller;
 
 import com.ahmedv2.zerostep.common.response.ApiResponse;
@@ -28,7 +27,6 @@ public class ReportController {
     private final PdfReportGenerator pdfGenerator;
     private final ExcelReportGenerator excelGenerator;
 
-    // ApiResponse.ok() — projedeki gerçek static method adı
     @GetMapping("/executions/{publicId}")
     @PreAuthorize("hasAnyRole('TESTER','ADMIN')")
     public ResponseEntity<ApiResponse<ExecutionReportDto>> getExecutionReport(

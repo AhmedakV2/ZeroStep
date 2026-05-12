@@ -14,7 +14,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -78,20 +77,34 @@ public class ReportService {
     }
 
     public ScenarioSummaryDto buildScenarioSummary(UUID scenarioPublicId) {
-        Object[] agg = executionRepo.findAggregatesByScenario(scenarioPublicId);
-        long totalRuns  = ((Number) agg[0]).longValue();
-        double avgDuration = ((Number) agg[1]).doubleValue();
+        long totalRuns = 0L;
+        double avgDuration = 0.0;
+
+        try {
+            Object rawAgg = executionRepo.findAggregatesByScenario(scenarioPublicId);
+
+            // Spring JPQL COUNT+AVG her zaman Object[] döner ama log edelim
+            if (rawAgg instanceof Object[] arr) {
+                totalRuns     = arr[0] != null ? ((Number) arr[0]).longValue()   : 0L;
+                avgDuration   = arr[1] != null ? ((Number) arr[1]).doubleValue() : 0.0;
+            }
+        } catch (Exception e) {
+            // Gerçek hatayı backend log'una yaz
+            throw new RuntimeException("findAggregatesByScenario failed: " + e.getMessage(), e);
+        }
 
         List<Execution> last10 = executionRepo.findLastNByScenario(
                 scenarioPublicId, PageRequest.of(0, 10));
 
         double overallPassRate = last10.isEmpty() ? 0.0 :
                 last10.stream()
-                .mapToDouble(e -> e.getTotalSteps() == 0 ? 0
-                                  : (double) e.getPassedSteps() / e.getTotalSteps() * 100)
-                .average().orElse(0.0);
+                .filter(e -> e.getTotalSteps() != null && e.getTotalSteps() > 0)
+                .mapToDouble(e -> (double) e.getPassedSteps() / e.getTotalSteps() * 100)
+                .average()
+                .orElse(0.0);
 
-        String scenarioName = last10.isEmpty() ? "" : last10.get(0).getScenario().getName();
+        String scenarioName = last10.isEmpty() ? ""
+                : last10.get(0).getScenario().getName();
 
         return new ScenarioSummaryDto(
                 scenarioPublicId.toString(),
@@ -116,8 +129,10 @@ public class ReportService {
         double avg = timed.stream()
                 .mapToLong(StepResultReportDto::durationMs).average().orElse(0);
 
-        double passRate = exec.getTotalSteps() == 0 ? 0 :
-                (double) exec.getPassedSteps() / exec.getTotalSteps() * 100;
+        // totalSteps null guard
+        double passRate = (exec.getTotalSteps() != null && exec.getTotalSteps() > 0)
+                ? (double) exec.getPassedSteps() / exec.getTotalSteps() * 100
+                : 0.0;
 
         List<StepResultReportDto> failed = steps.stream()
                 .filter(s -> "FAILED".equals(s.status())).toList();
@@ -152,19 +167,23 @@ public class ReportService {
     }
 
     private ReportListItemDto toListItem(Execution e) {
-        double passRate = e.getTotalSteps() == 0 ? 0 :
-                (double) e.getPassedSteps() / e.getTotalSteps() * 100;
+        // totalSteps null guard
+        double passRate = (e.getTotalSteps() != null && e.getTotalSteps() > 0)
+                ? (double) e.getPassedSteps() / e.getTotalSteps() * 100
+                : 0.0;
+
         return new ReportListItemDto(
                 e.getPublicId().toString(),
                 e.getScenario().getPublicId().toString(),
                 e.getScenario().getName(),
                 e.getStatus().name(),
                 e.getTriggerType().name(),
-                e.getScenario().getOwner().getUsername(),
+                e.getScenario().getOwner() != null
+                        ? e.getScenario().getOwner().getUsername() : "—",
                 e.getStartedAt(),
                 e.getFinishedAt(),
                 e.getDurationMs(),
-                e.getTotalSteps(),
+                e.getTotalSteps() != null ? e.getTotalSteps() : 0,
                 e.getPassedSteps(),
                 e.getFailedSteps(),
                 passRate
