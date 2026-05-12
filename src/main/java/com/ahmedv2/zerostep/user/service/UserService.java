@@ -1,9 +1,11 @@
 package com.ahmedv2.zerostep.user.service;
 
+import com.ahmedv2.zerostep.common.exception.ConflictException;
 import com.ahmedv2.zerostep.common.exception.ResourceNotFoundException;
 import com.ahmedv2.zerostep.common.exception.UnauthorizedException;
 import com.ahmedv2.zerostep.security.jwt.RefreshTokenService;
 import com.ahmedv2.zerostep.user.dto.ChangePasswordRequest;
+import com.ahmedv2.zerostep.user.dto.UpdateProfileRequest;
 import com.ahmedv2.zerostep.user.dto.UserResponse;
 import com.ahmedv2.zerostep.user.entity.Role;
 import com.ahmedv2.zerostep.user.entity.User;
@@ -25,7 +27,6 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
 
-    // Kullanicinin kendi profilini getir
     @Transactional(readOnly = true)
     public UserResponse getCurrentUser(String username) {
         User user = userRepository.findByUsernameWithRoles(username)
@@ -33,7 +34,29 @@ public class UserService {
         return toResponse(user);
     }
 
-    // Sifre degisikligi; mevcut sifreyi dogrula, yeniyi hash'le, tum oturumlari kapat
+    // displayName ve/veya email güncelle; email değişirse çakışma kontrolü yapılır
+    @Transactional
+    public UserResponse updateProfile(String username, UpdateProfileRequest request) {
+        User user = userRepository.findByUsernameWithRoles(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User", username));
+
+        if (request.displayName() != null) {
+            user.setDisplayName(request.displayName().isBlank() ? null : request.displayName().trim());
+        }
+
+        if (request.email() != null && !request.email().equals(user.getEmail())) {
+            // E-posta başka kullanıcıda kullanılıyor mu kontrol et
+            if (userRepository.existsByEmail(request.email())) {
+                throw new ConflictException("Bu e-posta adresi zaten kullanımda");
+            }
+            user.setEmail(request.email().trim());
+        }
+
+        User saved = userRepository.save(user);
+        log.info("Profil guncellendi: {}", username);
+        return toResponse(saved);
+    }
+
     @Transactional
     public void changePassword(String username, ChangePasswordRequest request) {
         User user = userRepository.findByUsername(username)
@@ -44,7 +67,6 @@ public class UserService {
             throw new UnauthorizedException("Mevcut sifre hatali");
         }
 
-        // Ayni sifreyi tekrar kullanmasin
         if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
             throw new UnauthorizedException("Yeni sifre eskisiyle ayni olamaz");
         }
@@ -53,12 +75,10 @@ public class UserService {
         user.setPasswordChangeRequired(false);
         userRepository.save(user);
 
-        // Guvenlik: sifre degisince tum refresh token'lari iptal et
         refreshTokenService.revokeAll(user);
         log.info("Sifre basariyla degistirildi: {}", username);
     }
 
-    // User entity -> UserResponse DTO donusumu
     private UserResponse toResponse(User user) {
         return new UserResponse(
                 user.getPublicId(),

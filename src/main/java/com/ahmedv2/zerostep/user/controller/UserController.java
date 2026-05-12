@@ -2,6 +2,7 @@ package com.ahmedv2.zerostep.user.controller;
 
 import com.ahmedv2.zerostep.common.response.ApiResponse;
 import com.ahmedv2.zerostep.user.dto.ChangePasswordRequest;
+import com.ahmedv2.zerostep.user.dto.UpdateProfileRequest;
 import com.ahmedv2.zerostep.user.dto.UserResponse;
 import com.ahmedv2.zerostep.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,11 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -28,14 +25,22 @@ public class UserController {
     @Operation(summary = "Mevcut kullanicinin profilini getir")
     @GetMapping("/me")
     public ApiResponse<UserResponse> getMyProfile(Authentication authentication) {
-        UserResponse response = userService.getCurrentUser(authentication.getName());
-        return ApiResponse.ok(response);
+        return ApiResponse.ok(userService.getCurrentUser(authentication.getName()));
     }
 
-    @Operation(summary = "Sifre degistir; sonrasinda tum oturumlar kapanir, yeniden login gerekir")
+    @Operation(summary = "Profil bilgilerini guncelle (displayName, email)")
+    @PatchMapping("/me")
+    public ApiResponse<UserResponse> updateProfile(
+            @Valid @RequestBody UpdateProfileRequest request,
+            Authentication authentication) {
+        return ApiResponse.ok(userService.updateProfile(authentication.getName(), request));
+    }
+
+    @Operation(summary = "Sifre degistir; sonrasinda tum oturumlar kapanir")
     @PostMapping("/me/change-password")
-    public ApiResponse<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request,
-                                            Authentication authentication) {
+    public ApiResponse<Void> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
         userService.changePassword(authentication.getName(), request);
         return ApiResponse.message("Sifre basariyla degistirildi. Lutfen yeniden giris yapin.");
     }

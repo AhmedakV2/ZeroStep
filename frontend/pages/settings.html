@@ -11,77 +11,149 @@
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/layout.css">
     <style>
-        /* Sayfa giriş animasyonları */
-        .stagger-item {
-            opacity: 0;
-            transform: translateY(18px);
-            animation: pageItemFadeUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        .delay-1 { animation-delay: 0.08s; }
-        .delay-2 { animation-delay: 0.16s; }
-        .delay-3 { animation-delay: 0.24s; }
-        @keyframes pageItemFadeUp { to { opacity: 1; transform: translateY(0); } }
+        /* Sayfa animasyonları */
+        .stagger-item { opacity:0; transform:translateY(18px); animation:pageItemFadeUp .55s cubic-bezier(.16,1,.3,1) forwards; }
+        .delay-1{animation-delay:.08s}.delay-2{animation-delay:.16s}.delay-3{animation-delay:.24s}
+        @keyframes pageItemFadeUp{to{opacity:1;transform:translateY(0)}}
 
-        .page-bg {
-            position: fixed; inset: 0; z-index: 0; pointer-events: none;
-            background:
-                    radial-gradient(ellipse 70% 50% at 15% 30%, rgba(158, 134, 232, 0.05) 0%, transparent 60%),
-                    radial-gradient(ellipse 50% 40% at 85% 70%, rgba(158, 134, 232, 0.03) 0%, transparent 55%);
-        }
-        .page-content { position: relative; z-index: 1; }
+        .page-bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+            background:radial-gradient(ellipse 70% 50% at 15% 30%,rgba(158,134,232,.05) 0%,transparent 60%),
+            radial-gradient(ellipse 50% 40% at 85% 70%,rgba(158,134,232,.03) 0%,transparent 55%);}
+        .page-content{position:relative;z-index:1;}
 
-        body.theme-light { --clr-bg: #f0f2f7; --clr-surface: #ffffff; --clr-surface-2: #f0f2f7; --clr-border: #d8dce8; --clr-border-focus: #3d7aed; --clr-text: #1a1f2e; --clr-text-muted: #6b7592; }
-        .settings-shell { display: grid; grid-template-columns: 220px 1fr; gap: 1.5rem; max-width: 900px; }
-        .settings-nav { display: flex; flex-direction: column; gap: 2px; }
-        .settings-tab { display: flex; align-items: center; gap: .65rem; padding: .6rem .875rem; border-radius: var(--radius-sm); color: var(--clr-text-muted); font-size: .875rem; font-weight: 500; cursor: pointer; border: none; background: transparent; width: 100%; text-align: left; transition: background var(--transition), color var(--transition); font-family: var(--font-body); }
-        .settings-tab:hover { background: var(--clr-surface-2); color: var(--clr-text); }
-        .settings-tab.active { background: rgba(158,134,232,.12); color: var(--clr-primary); font-weight: 600; }
-        .tab-icon { font-size: 1rem; width: 1.1rem; text-align: center; flex-shrink: 0; }
-        .settings-panel { display: none; }
-        .settings-panel.active { display: block; }
-        .settings-section { background: var(--clr-surface); border: 1px solid var(--clr-border); border-radius: var(--radius-md); padding: 1.5rem; margin-bottom: 1.25rem; box-shadow: var(--shadow-sm); }
-        .settings-section-title { font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--clr-text-muted); margin-bottom: 1.25rem; padding-bottom: .625rem; border-bottom: 1px solid var(--clr-border); }
-        .profile-header { display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.5rem; }
-        .profile-avatar-lg { width: 3.5rem; height: 3.5rem; border-radius: 50%; background: var(--clr-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; flex-shrink: 0; }
-        .profile-name { font-size: 1.05rem; font-weight: 700; color: var(--clr-text); }
-        .profile-meta { font-size: .8rem; color: var(--clr-text-muted); margin-top: .15rem; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .875rem; }
-        .info-item { display: flex; flex-direction: column; gap: .2rem; }
-        .info-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--clr-text-muted); }
-        .info-value { font-size: .88rem; color: var(--clr-text); font-family: var(--font-ui); }
-        .pref-row { display: flex; align-items: center; justify-content: space-between; padding: .875rem 0; border-bottom: 1px solid var(--clr-border); gap: 1rem; }
-        .pref-row:last-child { border-bottom: none; }
-        .pref-info { display: flex; align-items: center; gap: .6rem; font-size: .88rem; color: var(--clr-text); }
-        .pref-icon { width: 1.75rem; height: 1.75rem; background: rgba(158,134,232,.12); color: var(--clr-primary); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: .85rem; flex-shrink: 0; }
-        .pref-controls { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
-        .channel-chip { display: inline-flex; align-items: center; gap: .25rem; padding: .2rem .55rem; border-radius: 99px; font-size: .72rem; font-weight: 600; cursor: pointer; border: 1px solid var(--clr-border); background: transparent; color: var(--clr-text-muted); transition: all var(--transition); user-select: none; }
-        .channel-chip input { display: none; }
-        .channel-chip.active { background: rgba(158,134,232,.15); border-color: var(--clr-primary); color: var(--clr-primary); }
-        .toggle-switch-wrap { position: relative; width: 36px; height: 20px; cursor: pointer; flex-shrink: 0; }
-        .toggle-switch-wrap .pref-enabled { opacity: 0; width: 0; height: 0; position: absolute; }
-        .pref-toggle-slider { position: absolute; inset: 0; background: var(--clr-border); border-radius: 99px; transition: background .2s; }
-        .pref-toggle-slider::before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: transform .2s; }
-        .toggle-switch-wrap:has(.pref-enabled:checked) .pref-toggle-slider { background: var(--clr-primary); }
-        .toggle-switch-wrap:has(.pref-enabled:checked) .pref-toggle-slider::before { transform: translateX(16px); }
-        .theme-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
-        .theme-card { border: 2px solid var(--clr-border); border-radius: var(--radius-md); padding: 1.25rem; cursor: pointer; transition: all var(--transition); position: relative; }
-        .theme-card:hover { border-color: var(--clr-primary); }
-        .theme-card.selected { border-color: var(--clr-primary); background: rgba(158,134,232,.07); }
-        .theme-card.selected::after { content: '✓'; position: absolute; top: .625rem; right: .75rem; width: 1.25rem; height: 1.25rem; background: var(--clr-primary); color: #fff; border-radius: 50%; font-size: .7rem; display: flex; align-items: center; justify-content: center; }
-        .theme-preview { height: 72px; border-radius: var(--radius-sm); margin-bottom: .75rem; border: 1px solid var(--clr-border); overflow: hidden; display: flex; }
-        .preview-dark { background: #0d0f14; }
-        .preview-dark .preview-sidebar { width: 30%; background: #161b25; border-right: 1px solid #2a3347; }
-        .preview-dark .preview-main { flex: 1; padding: .5rem; display: flex; flex-direction: column; gap: .25rem; }
-        .preview-dark .preview-bar { height: 6px; background: #2a3347; border-radius: 2px; }
-        .preview-dark .preview-bar.accent { background: var(--clr-primary); width: 60%; }
-        .preview-light { background: #f0f2f7; }
-        .preview-light .preview-sidebar { width: 30%; background: #fff; border-right: 1px solid #d8dce8; }
-        .preview-light .preview-main { flex: 1; padding: .5rem; display: flex; flex-direction: column; gap: .25rem; }
-        .preview-light .preview-bar { height: 6px; background: #d8dce8; border-radius: 2px; }
-        .preview-light .preview-bar.accent { background: var(--clr-primary); width: 60%; }
-        .theme-name { font-size: .88rem; font-weight: 600; color: var(--clr-text); }
-        .theme-desc { font-size: .75rem; color: var(--clr-text-muted); margin-top: .15rem; }
-        @media (max-width: 700px) { .settings-shell { grid-template-columns: 1fr; } .settings-nav { flex-direction: row; overflow-x: auto; } .settings-tab { white-space: nowrap; } .info-grid { grid-template-columns: 1fr; } .theme-grid { grid-template-columns: 1fr; } }
+        /* Settings layout */
+        .settings-shell{display:grid;grid-template-columns:220px 1fr;gap:1.5rem;max-width:960px;}
+        .settings-nav{display:flex;flex-direction:column;gap:2px;}
+        .settings-tab{display:flex;align-items:center;gap:.65rem;padding:.6rem .875rem;border-radius:var(--radius-sm);
+            color:var(--clr-text-muted);font-size:.875rem;font-weight:500;cursor:pointer;border:none;
+            background:transparent;width:100%;text-align:left;transition:background var(--transition),color var(--transition);
+            font-family:var(--font-body);}
+        .settings-tab:hover{background:var(--clr-surface-2);color:var(--clr-text);}
+        .settings-tab.active{background:rgba(158,134,232,.12);color:var(--clr-primary);font-weight:600;}
+        .tab-icon{font-size:1rem;width:1.1rem;text-align:center;flex-shrink:0;}
+        .settings-panel{display:none;}
+        .settings-panel.active{display:block;}
+        .settings-section{background:var(--clr-surface);border:1px solid var(--clr-border);
+            border-radius:var(--radius-md);padding:1.5rem;margin-bottom:1.25rem;box-shadow:var(--shadow-sm);}
+        .settings-section-title{font-size:.82rem;font-weight:700;text-transform:uppercase;
+            letter-spacing:.06em;color:var(--clr-text-muted);margin-bottom:1.25rem;
+            padding-bottom:.625rem;border-bottom:1px solid var(--clr-border);}
+
+        /* Profil */
+        .profile-header{display:flex;align-items:center;gap:1.25rem;margin-bottom:1.5rem;}
+        .profile-avatar-lg{width:3.5rem;height:3.5rem;border-radius:50%;background:var(--clr-primary);
+            color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;flex-shrink:0;}
+        .profile-name{font-size:1.05rem;font-weight:700;color:var(--clr-text);}
+        .profile-meta{font-size:.8rem;color:var(--clr-text-muted);margin-top:.15rem;}
+        .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:.875rem;}
+        .info-item{display:flex;flex-direction:column;gap:.2rem;}
+        .info-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--clr-text-muted);}
+        .info-value{font-size:.88rem;color:var(--clr-text);font-family:var(--font-ui);}
+
+        /* Düzenleme formu */
+        .edit-field-row{display:flex;align-items:flex-end;gap:.5rem;margin-bottom:.75rem;}
+        .edit-field-row .form-group{flex:1;margin:0;}
+        .btn-edit-inline{white-space:nowrap;flex-shrink:0;}
+        .field-saved{font-size:.72rem;color:var(--clr-success);margin-top:.2rem;display:none;}
+        .field-saved.visible{display:block;}
+
+        /* Şifre gücü */
+        .pw-strength-bar{height:4px;border-radius:2px;background:var(--clr-border);margin-top:.4rem;overflow:hidden;}
+        .pw-strength-fill{height:100%;border-radius:2px;transition:width .3s,background .3s;width:0%;}
+        .pw-strength-label{font-size:.72rem;color:var(--clr-text-muted);margin-top:.25rem;}
+
+        /* Bildirim tercihleri */
+        .pref-row{display:flex;align-items:center;justify-content:space-between;
+            padding:.875rem 0;border-bottom:1px solid var(--clr-border);gap:1rem;}
+        .pref-row:last-child{border-bottom:none;}
+        .pref-info{display:flex;align-items:center;gap:.6rem;font-size:.88rem;color:var(--clr-text);}
+        .pref-icon{width:1.75rem;height:1.75rem;background:rgba(158,134,232,.12);color:var(--clr-primary);
+            border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;}
+        .pref-controls{display:flex;align-items:center;gap:.5rem;flex-shrink:0;}
+        .channel-chip{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .55rem;border-radius:99px;
+            font-size:.72rem;font-weight:600;cursor:pointer;border:1px solid var(--clr-border);background:transparent;
+            color:var(--clr-text-muted);transition:all var(--transition);user-select:none;}
+        .channel-chip input{display:none;}
+        .channel-chip.active{background:rgba(158,134,232,.15);border-color:var(--clr-primary);color:var(--clr-primary);}
+        .toggle-switch-wrap{position:relative;width:36px;height:20px;cursor:pointer;flex-shrink:0;}
+        .toggle-switch-wrap .pref-enabled{opacity:0;width:0;height:0;position:absolute;}
+        .pref-toggle-slider{position:absolute;inset:0;background:var(--clr-border);border-radius:99px;transition:background .2s;}
+        .pref-toggle-slider::before{content:'';position:absolute;width:14px;height:14px;left:3px;bottom:3px;
+            background:#fff;border-radius:50%;transition:transform .2s;}
+        .toggle-switch-wrap:has(.pref-enabled:checked) .pref-toggle-slider{background:var(--clr-primary);}
+        .toggle-switch-wrap:has(.pref-enabled:checked) .pref-toggle-slider::before{transform:translateX(16px);}
+
+        /* Tema */
+        .theme-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;}
+        .theme-card{border:2px solid var(--clr-border);border-radius:var(--radius-md);padding:1.25rem;
+            cursor:pointer;transition:all var(--transition);position:relative;}
+        .theme-card:hover{border-color:var(--clr-primary);}
+        .theme-card.selected{border-color:var(--clr-primary);background:rgba(158,134,232,.07);}
+        .theme-card.selected::after{content:'✓';position:absolute;top:.625rem;right:.75rem;
+            width:1.25rem;height:1.25rem;background:var(--clr-primary);color:#fff;border-radius:50%;
+            font-size:.7rem;display:flex;align-items:center;justify-content:center;}
+        .theme-preview{height:72px;border-radius:var(--radius-sm);margin-bottom:.75rem;
+            border:1px solid var(--clr-border);overflow:hidden;display:flex;}
+        .preview-dark{background:#0d0f14;}
+        .preview-dark .preview-sidebar{width:30%;background:#161b25;border-right:1px solid #2a3347;}
+        .preview-dark .preview-main{flex:1;padding:.5rem;display:flex;flex-direction:column;gap:.25rem;}
+        .preview-dark .preview-bar{height:6px;background:#2a3347;border-radius:2px;}
+        .preview-dark .preview-bar.accent{background:var(--clr-primary);width:60%;}
+        .preview-light{background:#f0f2f7;}
+        .preview-light .preview-sidebar{width:30%;background:#fff;border-right:1px solid #d8dce8;}
+        .preview-light .preview-main{flex:1;padding:.5rem;display:flex;flex-direction:column;gap:.25rem;}
+        .preview-light .preview-bar{height:6px;background:#d8dce8;border-radius:2px;}
+        .preview-light .preview-bar.accent{background:var(--clr-primary);width:60%;}
+        .theme-name{font-size:.88rem;font-weight:600;color:var(--clr-text);}
+        .theme-desc{font-size:.75rem;color:var(--clr-text-muted);margin-top:.15rem;}
+
+        /* Oturum yönetimi */
+        .session-card{display:flex;align-items:center;justify-content:space-between;
+            padding:.875rem 1rem;border:1px solid var(--clr-border);border-radius:var(--radius-sm);
+            background:var(--clr-surface-2);margin-bottom:.625rem;gap:1rem;}
+        .session-card.current{border-color:var(--clr-primary);background:rgba(158,134,232,.05);}
+        .session-info{display:flex;align-items:center;gap:.75rem;flex:1;min-width:0;}
+        .session-icon{width:2rem;height:2rem;border-radius:var(--radius-sm);
+            background:rgba(158,134,232,.12);color:var(--clr-primary);
+            display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;}
+        .session-details{min-width:0;}
+        .session-device{font-size:.82rem;font-weight:600;color:var(--clr-text);
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .session-meta{font-size:.72rem;color:var(--clr-text-muted);margin-top:.1rem;}
+        .session-badge{font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:99px;
+            background:rgba(74,222,128,.15);color:var(--clr-success);border:1px solid rgba(74,222,128,.3);}
+
+        /* Son oturum tablosu */
+        .last-login-table{width:100%;font-size:.82rem;}
+        .last-login-table th{font-size:.7rem;font-weight:700;text-transform:uppercase;
+            letter-spacing:.06em;color:var(--clr-text-muted);padding:.5rem .75rem;
+            border-bottom:1px solid var(--clr-border);text-align:left;}
+        .last-login-table td{padding:.625rem .75rem;border-bottom:1px solid var(--clr-border);
+            color:var(--clr-text);vertical-align:middle;}
+        .last-login-table tr:last-child td{border-bottom:none;}
+
+        /* Unsaved changes banner */
+        .unsaved-banner{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);
+            background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:var(--radius-md);
+            box-shadow:var(--shadow-lg);padding:.75rem 1.25rem;display:flex;align-items:center;gap:1rem;
+            z-index:500;transition:transform .3s cubic-bezier(.16,1,.3,1);min-width:320px;}
+        .unsaved-banner.visible{transform:translateX(-50%) translateY(0);}
+        .unsaved-banner-text{flex:1;font-size:.85rem;color:var(--clr-text);}
+        .unsaved-banner-text span{color:var(--clr-warning);font-weight:600;}
+
+        /* Skeleton */
+        .skeleton{background:linear-gradient(90deg,var(--clr-surface-2) 25%,rgba(255,255,255,.04) 50%,var(--clr-surface-2) 75%);
+            background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:var(--radius-sm);}
+        @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+        .skeleton-line{height:.75rem;border-radius:3px;margin-bottom:.4rem;}
+
+        @media(max-width:700px){
+            .settings-shell{grid-template-columns:1fr;}
+            .settings-nav{flex-direction:row;overflow-x:auto;}
+            .settings-tab{white-space:nowrap;}
+            .info-grid{grid-template-columns:1fr;}
+            .theme-grid{grid-template-columns:1fr;}
+        }
     </style>
 </head>
 <body>
@@ -96,15 +168,26 @@
         <div class="settings-shell">
             <!-- Sol nav -->
             <nav class="settings-nav stagger-item delay-1">
-                <button class="settings-tab active" data-tab="profile"><span class="tab-icon">◉</span> Profil</button>
-                <button class="settings-tab" data-tab="notifications"><span class="tab-icon">◈</span> Bildirimler</button>
-                <button class="settings-tab" data-tab="appearance"><span class="tab-icon">◑</span> Görünüm</button>
+                <button class="settings-tab active" data-tab="profile">
+                    <span class="tab-icon">◉</span> Profil
+                </button>
+                <button class="settings-tab" data-tab="notifications">
+                    <span class="tab-icon">◈</span> Bildirimler
+                </button>
+                <button class="settings-tab" data-tab="sessions">
+                    <span class="tab-icon">◷</span> Oturumlar
+                </button>
+                <button class="settings-tab" data-tab="appearance">
+                    <span class="tab-icon">◑</span> Görünüm
+                </button>
             </nav>
 
-            <!-- Panel içerikleri -->
             <div class="settings-content stagger-item delay-2">
-                <!-- Profil Paneli -->
+
+                <!-- ── PROFİL PANELİ ───────────────────────────────── -->
                 <div class="settings-panel active" id="panel-profile">
+
+                    <!-- Hesap kartı -->
                     <div class="settings-section">
                         <div class="settings-section-title">Hesap Bilgileri</div>
                         <div class="profile-header">
@@ -115,62 +198,191 @@
                             </div>
                         </div>
                         <div class="info-grid">
-                            <div class="info-item"><span class="info-label">Görünen Ad</span><span class="info-value" id="prof-display">—</span></div>
-                            <div class="info-item"><span class="info-label">Roller</span><span class="info-value" id="prof-roles">—</span></div>
-                            <div class="info-item"><span class="info-label">Kayıt Tarihi</span><span class="info-value" id="prof-created">—</span></div>
-                            <div class="info-item"><span class="info-label">Son Giriş</span><span class="info-value" id="prof-lastlogin">—</span></div>
+                            <div class="info-item">
+                                <span class="info-label">Görünen Ad</span>
+                                <span class="info-value" id="prof-display">—</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Roller</span>
+                                <span class="info-value" id="prof-roles">—</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Kayıt Tarihi</span>
+                                <span class="info-value" id="prof-created">—</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Son Giriş</span>
+                                <span class="info-value" id="prof-lastlogin">—</span>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Profil düzenleme -->
+                    <div class="settings-section">
+                        <div class="settings-section-title">Profili Düzenle</div>
+
+                        <!-- Görünen ad -->
+                        <div class="edit-field-row">
+                            <div class="form-group">
+                                <label class="form-label">Görünen Ad</label>
+                                <input class="form-input" type="text" id="edit-displayName"
+                                       placeholder="Adınız Soyadınız" maxlength="128">
+                                <div class="field-saved" id="saved-displayName">✓ Kaydedildi</div>
+                            </div>
+                            <button class="btn btn-ghost btn-sm btn-edit-inline" id="btn-save-displayName">
+                                Kaydet
+                            </button>
+                        </div>
+
+                        <!-- E-posta -->
+                        <div class="edit-field-row">
+                            <div class="form-group">
+                                <label class="form-label">E-posta</label>
+                                <input class="form-input" type="email" id="edit-email"
+                                       placeholder="ornek@domain.com" maxlength="255">
+                                <div class="field-saved" id="saved-email">✓ Kaydedildi</div>
+                                <span class="form-error" id="email-err"></span>
+                            </div>
+                            <button class="btn btn-ghost btn-sm btn-edit-inline" id="btn-save-email">
+                                Kaydet
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Güvenlik -->
                     <div class="settings-section">
                         <div class="settings-section-title">Güvenlik</div>
                         <div style="display:flex;align-items:center;justify-content:space-between;">
                             <div>
                                 <div style="font-size:.88rem;font-weight:600;color:var(--clr-text);">Şifre</div>
-                                <div style="font-size:.78rem;color:var(--clr-text-muted);margin-top:.15rem;">Son değişiklik bilgisi saklanmamaktadır.</div>
+                                <div style="font-size:.78rem;color:var(--clr-text-muted);margin-top:.15rem;">
+                                    Son değişiklik bilgisi saklanmamaktadır.
+                                </div>
                             </div>
                             <button class="btn btn-ghost btn-sm" id="btn-change-password">Şifre Değiştir</button>
                         </div>
                     </div>
+
+                    <!-- Son oturum tablosu -->
+                    <div class="settings-section">
+                        <div class="settings-section-title">Son Oturum Geçmişi</div>
+                        <div id="login-history-wrap">
+                            <div class="skeleton skeleton-line" style="width:100%;height:32px;"></div>
+                            <div class="skeleton skeleton-line" style="width:100%;height:32px;"></div>
+                        </div>
+                        <table class="last-login-table" id="login-history-table" style="display:none;">
+                            <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>IP Adresi</th>
+                                <th>Tarayıcı / Cihaz</th>
+                                <th>Durum</th>
+                            </tr>
+                            </thead>
+                            <tbody id="login-history-body">
+                            <tr><td colspan="4" style="text-align:center;color:var(--clr-text-muted);padding:1rem;">
+                                Oturum geçmişi bilgisi henüz mevcut değil.
+                            </td></tr>
+                            </tbody>
+                        </table>
+                        <p style="font-size:.72rem;color:var(--clr-text-muted);margin-top:.75rem;">
+                            Tanımadığınız bir giriş görüyorsanız hemen şifrenizi değiştirin.
+                        </p>
+                    </div>
                 </div>
 
-                <!-- Bildirim Paneli -->
+                <!-- ── BİLDİRİM PANELİ ─────────────────────────────── -->
                 <div class="settings-panel" id="panel-notifications">
                     <div class="settings-section">
                         <div class="settings-section-title">Bildirim Kanalları</div>
-                        <p style="font-size:.82rem;color:var(--clr-text-muted);margin-bottom:1.25rem;">Her bildirim türü için hangi kanallardan ve aktif olup olmayacağını belirleyin.</p>
-                        <div id="notif-prefs-list"><div style="padding:1rem;color:var(--clr-text-muted);font-size:.85rem;">Yükleniyor...</div></div>
+                        <p style="font-size:.82rem;color:var(--clr-text-muted);margin-bottom:1.25rem;">
+                            Her bildirim türü için hangi kanallardan ve aktif olup olmayacağını belirleyin.
+                        </p>
+                        <div id="notif-prefs-list">
+                            <div class="skeleton skeleton-line" style="width:100%;height:48px;"></div>
+                            <div class="skeleton skeleton-line" style="width:100%;height:48px;"></div>
+                            <div class="skeleton skeleton-line" style="width:100%;height:48px;"></div>
+                        </div>
                         <div style="margin-top:1.25rem;display:flex;justify-content:flex-end;">
                             <button class="btn btn-primary btn-sm" id="btn-save-notifs">Kaydet</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Görünüm Paneli -->
+                <!-- ── OTURUM PANELİ ──────────────────────────────────── -->
+                <div class="settings-panel" id="panel-sessions">
+                    <div class="settings-section">
+                        <div class="settings-section-title">Aktif Oturumlar</div>
+                        <p style="font-size:.82rem;color:var(--clr-text-muted);margin-bottom:1.25rem;">
+                            Hesabınıza bağlı aktif oturumları görüntüleyin ve tanımadığınız oturumları sonlandırın.
+                        </p>
+                        <div id="sessions-list">
+                            <div class="skeleton skeleton-line" style="width:100%;height:64px;"></div>
+                            <div class="skeleton skeleton-line" style="width:100%;height:64px;"></div>
+                        </div>
+                        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--clr-border);">
+                            <button class="btn btn-danger btn-sm" id="btn-revoke-all">
+                                Diğer Tüm Oturumları Sonlandır
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── GÖRÜNÜM PANELİ ─────────────────────────────────── -->
                 <div class="settings-panel" id="panel-appearance">
                     <div class="settings-section">
                         <div class="settings-section-title">Tema</div>
                         <div class="theme-grid">
                             <div class="theme-card" data-theme="dark">
-                                <div class="theme-preview preview-dark"><div class="preview-sidebar"></div><div class="preview-main"><div class="preview-bar accent"></div><div class="preview-bar" style="width:80%"></div><div class="preview-bar" style="width:50%"></div></div></div>
-                                <div class="theme-name">Koyu</div><div class="theme-desc">Varsayılan koyu arayüz</div>
+                                <div class="theme-preview preview-dark">
+                                    <div class="preview-sidebar"></div>
+                                    <div class="preview-main">
+                                        <div class="preview-bar accent"></div>
+                                        <div class="preview-bar" style="width:80%"></div>
+                                        <div class="preview-bar" style="width:50%"></div>
+                                    </div>
+                                </div>
+                                <div class="theme-name">Koyu</div>
+                                <div class="theme-desc">Varsayılan koyu arayüz</div>
                             </div>
                             <div class="theme-card" data-theme="light">
-                                <div class="theme-preview preview-light"><div class="preview-sidebar"></div><div class="preview-main"><div class="preview-bar accent"></div><div class="preview-bar" style="width:80%"></div><div class="preview-bar" style="width:50%"></div></div></div>
-                                <div class="theme-name">Açık</div><div class="theme-desc">Beyaz tabanlı aydınlık arayüz</div>
+                                <div class="theme-preview preview-light">
+                                    <div class="preview-sidebar"></div>
+                                    <div class="preview-main">
+                                        <div class="preview-bar accent"></div>
+                                        <div class="preview-bar" style="width:80%"></div>
+                                        <div class="preview-bar" style="width:50%"></div>
+                                    </div>
+                                </div>
+                                <div class="theme-name">Açık</div>
+                                <div class="theme-desc">Beyaz tabanlı aydınlık arayüz</div>
                             </div>
                         </div>
                     </div>
                     <div class="settings-section">
                         <div class="settings-section-title">Dil</div>
                         <div style="display:flex;align-items:center;justify-content:space-between;">
-                            <div><div style="font-size:.88rem;font-weight:600;color:var(--clr-text);">Türkçe</div><div style="font-size:.78rem;color:var(--clr-text-muted);margin-top:.15rem;">Şu an için yalnızca Türkçe desteklenmektedir.</div></div>
+                            <div>
+                                <div style="font-size:.88rem;font-weight:600;color:var(--clr-text);">Türkçe</div>
+                                <div style="font-size:.78rem;color:var(--clr-text-muted);margin-top:.15rem;">
+                                    Şu an için yalnızca Türkçe desteklenmektedir.
+                                </div>
+                            </div>
                             <span class="badge badge-neutral">TR</span>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+
+            </div><!-- /settings-content -->
+        </div><!-- /settings-shell -->
     </main>
+</div>
+
+<!-- Unsaved changes banner -->
+<div class="unsaved-banner" id="unsaved-banner">
+    <span class="unsaved-banner-text"><span>Kaydedilmemiş değişiklikler</span> var. Devam etmek istiyor musunuz?</span>
+    <button class="btn btn-ghost btn-sm" id="btn-discard-changes">Vazgeç</button>
+    <button class="btn btn-primary btn-sm" id="btn-keep-changes">Koru</button>
 </div>
 
 <script>
