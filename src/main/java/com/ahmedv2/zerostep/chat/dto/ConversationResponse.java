@@ -5,10 +5,11 @@ import java.util.UUID;
 
 public record ConversationResponse(
         UUID publicId,
-        ParticipantDto otherUser,   // çağıran açısından "karşı taraf"
+        ParticipantDto otherUser,
         String lastMessagePreview,
         Instant lastMessageAt,
-        Instant createdAt
+        Instant createdAt,
+        long unreadCount
 ) {
     public record ParticipantDto(UUID publicId, String username, String displayName) {}
 }

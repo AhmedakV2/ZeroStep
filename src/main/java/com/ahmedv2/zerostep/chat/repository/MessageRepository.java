@@ -45,7 +45,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
                              @Param("readerId") Long readerId,
                              @Param("now") Instant now);
 
-    // Okunmamış mesaj sayısı (kullanıcının dahil olduğu tüm konuşmalarda)
+    // Okunmamış mesaj sayısı (kullanıcının dahil olduğu tüm konuşmalarda - Genel Toplam)
     @Query("""
         SELECT COUNT(m) FROM Message m
         WHERE (m.conversation.userOne.id = :userId OR m.conversation.userTwo.id = :userId)
@@ -54,4 +54,15 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
           AND m.deleted = false
         """)
     long countUnreadByUser(@Param("userId") Long userId);
+
+    // --- YENİ EKLENEN VE DÜZELTİLEN KISIM ---
+    // SADECE BELİRLİ BİR SOHBETTEKİ okunmamış mesaj sayısını bulur (Yeşil rozetler için)
+    @Query("""
+        SELECT COUNT(m) FROM Message m
+        WHERE m.conversation.id = :convId
+          AND m.sender.id <> :senderId
+          AND m.readAt IS NULL
+          AND m.deleted = false
+        """)
+    long countUnreadInConversation(@Param("convId") Long convId, @Param("senderId") Long senderId);
 }

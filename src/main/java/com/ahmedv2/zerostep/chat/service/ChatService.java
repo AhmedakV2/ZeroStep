@@ -50,7 +50,6 @@ public class ChatService {
         User target = userRepository.findByPublicId(targetPublicId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", targetPublicId));
 
-        // Pasif veya silinmiş kullanıcı kontrolü
         if (!target.isEnabled() || target.getDeletedAt() != null) {
             throw new ConflictException("Bu kullaniciyla konusma baslatilamaz");
         }
@@ -59,7 +58,6 @@ public class ChatService {
             throw new ConflictException("Kendinizle konusma baslatamazsiniz");
         }
 
-        // Normalize: küçük id her zaman userOne
         long oneId = Math.min(requester.getId(), target.getId());
         long twoId = Math.max(requester.getId(), target.getId());
 
@@ -88,7 +86,6 @@ public class ChatService {
         msg.setContent(content);
         Message saved = messageRepository.save(msg);
 
-        // Konuşma preview güncelle
         String preview = content.length() > 100 ? content.substring(0, 100) + "..." : content;
         conv.setLastMessageAt(saved.getSentAt());
         conv.setLastMessagePreview(preview);
@@ -96,17 +93,13 @@ public class ChatService {
 
         MessageResponse response = toMessageResponse(saved, false);
 
-        // Karşı tarafa WebSocket push
         Long recipientId = getOtherId(conv, senderId);
-        User recipient = userRepository.findById(recipientId)
-                .orElse(null);
+        User recipient = userRepository.findById(recipientId).orElse(null);
 
-        // Recipient aktif ve silinmemişse bildirimi/mesajı ilet
         if (recipient != null && recipient.isEnabled() && recipient.getDeletedAt() == null) {
             messagingTemplate.convertAndSendToUser(
                     recipient.getUsername(), "/queue/chat", response);
 
-            // Faz 8 bildirim entegrasyonu
             notificationService.send(
                     recipientId,
                     NotificationType.NEW_MESSAGE,
@@ -121,13 +114,11 @@ public class ChatService {
         return response;
     }
 
-    // Mesajları listele (kullanıcı; silinmişler hariç)
     @Transactional
     public Page<MessageResponse> getMessages(UUID convPublicId, Long userId, Pageable pageable) {
         Conversation conv = findConvOrThrow(convPublicId);
         checkParticipant(conv, userId);
 
-        // Okuma anında karşı tarafın mesajlarını okundu olarak işaretle
         int marked = messageRepository.markConversationRead(conv.getId(), userId, Instant.now());
         if (marked > 0) {
             log.debug("Okundu islemi: conv={} count={}", convPublicId, marked);
@@ -137,7 +128,6 @@ public class ChatService {
                 .map(m -> toMessageResponse(m, false));
     }
 
-    // Tek mesajı okundu olarak işaretle
     @Transactional
     public MessageResponse markRead(UUID msgPublicId, Long userId) {
         Message msg = messageRepository.findByPublicId(msgPublicId)
@@ -154,7 +144,6 @@ public class ChatService {
         return toMessageResponse(msg, false);
     }
 
-    // Soft delete (sadece mesajın sahibi)
     @Transactional
     public void deleteMessage(UUID msgPublicId, Long userId) {
         Message msg = messageRepository.findByPublicId(msgPublicId)
@@ -168,13 +157,10 @@ public class ChatService {
         log.debug("Mesaj silindi (soft): {}", msgPublicId);
     }
 
-    // Okunmamış mesaj sayısı
     @Transactional(readOnly = true)
     public UnreadMessageCountResponse unreadCount(Long userId) {
         return new UnreadMessageCountResponse(messageRepository.countUnreadByUser(userId));
     }
-
-    // ADMIN
 
     @Transactional(readOnly = true)
     public Page<AdminConversationResponse> adminListConversations(String search, Pageable pageable) {
@@ -183,7 +169,6 @@ public class ChatService {
                 .map(this::toAdminConversationResponse);
     }
 
-    // Admin mesajları okur; silinmişler dahil, içerik maskelenmez
     @Transactional(readOnly = true)
     public Page<MessageResponse> adminGetMessages(UUID convPublicId, Pageable pageable) {
         Conversation conv = conversationRepository.findByPublicId(convPublicId)
@@ -191,8 +176,6 @@ public class ChatService {
         return messageRepository.findByConversationAdmin(conv.getId(), pageable)
                 .map(m -> toMessageResponse(m, true));
     }
-
-    // YARDIMCILAR
 
     private Conversation findConvOrThrow(UUID publicId) {
         return conversationRepository.findByPublicId(publicId)
@@ -215,13 +198,18 @@ public class ChatService {
 
     private ConversationResponse toConversationResponse(Conversation c, Long viewerId) {
         User other = c.getUserOne().getId().equals(viewerId) ? c.getUserTwo() : c.getUserOne();
+
+        // Yeni @Query metodumuzla hatasız ve sorunsuz bir şekilde sayıyı çekiyoruz
+        long unreadCount = messageRepository.countUnreadInConversation(c.getId(), viewerId);
+
         return new ConversationResponse(
                 c.getPublicId(),
                 new ConversationResponse.ParticipantDto(
                         other.getPublicId(), other.getUsername(), other.getDisplayName()),
                 c.getLastMessagePreview(),
                 c.getLastMessageAt(),
-                c.getCreatedAt()
+                c.getCreatedAt(),
+                unreadCount
         );
     }
 
@@ -243,7 +231,6 @@ public class ChatService {
     }
 
     private MessageResponse toMessageResponse(Message m, boolean adminView) {
-        // Admin veya normal kullanıcı görünümü: silinen mesajlarda içerik maskelenir
         String content = (m.isDeleted() && !adminView) ? null : m.getContent();
         return new MessageResponse(
                 m.getPublicId(),

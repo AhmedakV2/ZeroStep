@@ -10,6 +10,9 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +24,14 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+
+    @Operation(summary = "Sistemdeki kullanicilari ara (Chat vb. islemler icin)")
+    @GetMapping
+    public ApiResponse<Page<UserResponse>> searchUsers(
+            @RequestParam(required = false) String search,
+            @PageableDefault(size = 20, sort = "username") Pageable pageable) {
+        return ApiResponse.ok(userService.searchUsers(search, pageable));
+    }
 
     @Operation(summary = "Mevcut kullanicinin profilini getir")
     @GetMapping("/me")

@@ -12,6 +12,8 @@ import com.ahmedv2.zerostep.user.entity.User;
 import com.ahmedv2.zerostep.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,16 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
+
+    @Transactional(readOnly = true)
+    public Page<UserResponse> searchUsers(String search, Pageable pageable) {
+        // Arama terimi null ise boş stringe çeviriyoruz ki repository'deki query patlamasın
+        String searchTerm = (search == null) ? "" : search.trim();
+        Page<User> users = userRepository.searchActive(searchTerm, pageable);
+
+        // Gelen User sayfasını UserResponse sayfasına dönüştürüyoruz
+        return users.map(this::toResponse);
+    }
 
     @Transactional(readOnly = true)
     public UserResponse getCurrentUser(String username) {

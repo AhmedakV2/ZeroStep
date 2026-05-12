@@ -1,8 +1,8 @@
-// Bildirimler sayfası — liste, okundu işaretleme, arama, tercihler, WebSocket
+// Bildirimler sayfası — liste, okundu işaretleme, arama, tercihler, WebSocket, Chat Widget Entegrasyonu
 
 let currentPage  = 0;
 let currentFilter = 'all'; // 'all' | 'unread' | NotificationType
-let currentSearch = '';    // ARAMA DEĞİŞKENİ EKLENDİ
+let currentSearch = '';
 let stompClient  = null;
 let wsConnected  = false;
 
@@ -19,9 +19,10 @@ let summaryCache = { total: 0, unread: 0, completed: 0, failed: 0 };
     Topbar.render('topbar', 'Bildirimler');
 
     setupFilterTabs();
-    setupSearch(); // ARAMA FONKSİYONU ÇAĞRILDI
+    setupSearch();
     setupHeaderButtons();
     connectWebSocket();
+    setupChatWidgetIntegration(); // YENİ: Chat widget ile entegrasyon
 
     await loadNotifications();
     await loadSummary();
@@ -34,19 +35,16 @@ async function loadNotifications() {
     try {
         const params = { page: currentPage, size: 20 };
 
-        // Filtre parametreleri (Backend'e gönderilir)
         if (currentFilter === 'unread') {
             params.unreadOnly = true;
         } else if (currentFilter !== 'all') {
             params.type = getMappedFilterType(currentFilter);
         }
 
-        // Arama parametresi
         if (currentSearch) {
             params.search = currentSearch;
         }
 
-        // GET /api/v1/notifications
         const raw = await Api.get('/notifications', params);
         let items    = [];
         let pageData = {};
@@ -62,9 +60,6 @@ async function loadNotifications() {
             pageData = { totalPages: 0, totalElements: 0, number: 0 };
         }
 
-        // 🌟 FRONTEND FİLTRE KORUMASI (FALLBACK) 🌟
-        // Eğer Spring Boot backend'deki endpoint henüz "type" veya "unreadOnly"
-        // parametrelerine göre sorgu filtrelemesi yapmıyorsa, gelen veriyi burada eziyoruz.
         if (currentFilter === 'unread') {
             items = items.filter(n => !n.read);
         } else if (currentFilter !== 'all') {
@@ -72,7 +67,6 @@ async function loadNotifications() {
             items = items.filter(n => n.type === expectedType);
         }
 
-        // Arama inputu için frontend filtre koruması
         if (currentSearch) {
             const s = currentSearch.toLowerCase();
             items = items.filter(n =>
@@ -93,16 +87,12 @@ async function loadNotifications() {
 
 async function loadSummary() {
     try {
-        // Okunmamış sayısı
         const unread = await Api.get('/notifications/unread-count');
         summaryCache.unread = unread?.count ?? 0;
 
-        // Toplam sayı için tüm bildirimleri çek (küçük bir istek)
         const all = await Api.get('/notifications', { page: 0, size: 1 });
         summaryCache.total = all?.totalElements ?? 0;
 
-        // Completed ve Failed için tip bazlı count — backend'de ayrı endpoint yoksa
-        // pagination'dan tahmin ediyoruz; burada ayrı sorgular atılabilir
         const completed = await Api.get('/notifications', { page: 0, size: 1, type: 'EXECUTION_COMPLETED' });
         const failed    = await Api.get('/notifications', { page: 0, size: 1, type: 'EXECUTION_FAILED' });
 
@@ -135,15 +125,14 @@ function renderList(items) {
         ${items.map(n => renderNotifItem(n)).join('')}
     </div>`;
 
-    // Satır tıklama — link'e yönlendir + okundu işaretle
+    // Satır tıklama — DÜZELTİLDİ: DOM elementi (el) handleNotifClick'e gönderiliyor
     container.querySelectorAll('.notif-item[data-id]').forEach(el => {
         el.addEventListener('click', (e) => {
             if (e.target.closest('.notif-action-btn')) return;
-            handleNotifClick(el.dataset.id, el.dataset.link, el.classList.contains('unread'), el.dataset.type);
+            handleNotifClick(el.dataset.id, el.dataset.link, el.classList.contains('unread'), el.dataset.type, el);
         });
     });
 
-    // Okundu butonu
     container.querySelectorAll('[data-action="read"]').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -151,7 +140,6 @@ function renderList(items) {
         });
     });
 
-    // Sil butonu
     container.querySelectorAll('[data-action="delete"]').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -227,16 +215,24 @@ function updateSummaryUI() {
 // ═══════════════════════════════════════════════════════════
 // AKSIYONLAR
 // ═══════════════════════════════════════════════════════════
-async function handleNotifClick(id, link, wasUnread, notifType) {
-    if (wasUnread) await markRead(id);
+async function handleNotifClick(id, link, wasUnread, notifType, rowEl) {
+    if (wasUnread) {
+        await markRead(id, rowEl); // DÜZELTİLDİ: DOM elementi geçiriliyor
+    }
+
+    // YENİ: Eğer bildirim tipi mesaj ise, olmayan chat.html yerine Chat Widget'ı aç
+    if (notifType === 'NEW_MESSAGE') {
+        if (window.ChatWidget) {
+            ChatWidget.open();
+        }
+        return; // Sayfa yönlendirmesini iptal et
+    }
 
     let resolved = null;
 
-    // Eğer backend'den gelen link varsa onu kullan
     if (link && link !== '' && link !== 'null') {
         resolved = parseNotificationLink(link);
     }
-    // Eğer notif tipi tanımlandıysa, tip bazlı yönlendirme yap
     else if (notifType) {
         resolved = resolveNotificationPage(notifType, id);
     }
@@ -368,7 +364,7 @@ function setupSearch() {
             currentPage = 0;
             showLoadingSkeleton();
             loadNotifications();
-        }, 400); // 400ms bekleme süresi
+        }, 400);
     });
 }
 
@@ -534,25 +530,43 @@ function connectWebSocket() {
 }
 
 function handleIncomingNotification(notif) {
-    summaryCache.unread++;
+    // YENİ: Kullanıcı halihazırda chat widget penceresinde aktif mesajlaşmadaysa,
+    // gelen mesaj bildirimini rahatsız etmemek adına otomatik olarak arka planda "okundu" yap.
+    const isChatActive = document.querySelector('#cw-chat-view.cw-active') !== null;
+    let autoRead = false;
+
+    if (notif.type === 'NEW_MESSAGE' && isChatActive) {
+        autoRead = true;
+        notif.read = true;
+        if (notif.publicId) {
+            Api.post(`/notifications/${notif.publicId}/read`, {}).catch(() => {});
+        }
+    }
+
+    if (!autoRead) {
+        summaryCache.unread++;
+    }
+
     summaryCache.total++;
     updateSummaryUI();
-    Topbar.updateNotifBadge(summaryCache.unread);
-    Sidebar.updateBadge('notif', summaryCache.unread);
 
-    const cfg = typeConfig(notif.type);
-    Toast.info(`${cfg.icon} ${notif.title}: ${notif.message}`, 5000);
+    if (!autoRead) {
+        Topbar.updateNotifBadge(summaryCache.unread);
+        Sidebar.updateBadge('notif', summaryCache.unread);
+        const cfg = typeConfig(notif.type);
+        Toast.info(`${cfg.icon} ${notif.title}: ${notif.message}`, 5000);
+    }
 
     const mappedFilter = getMappedFilterType(currentFilter);
     const shouldShow = currentFilter === 'all'
         || currentFilter === 'unread'
         || mappedFilter === notif.type;
 
-    if (shouldShow && currentPage === 0 && !currentSearch) { // Eğer arama yapılıyorsa websocket yeni bildirim listesini hemen ezmesin
+    if (shouldShow && currentPage === 0 && !currentSearch) {
         const listEl = document.querySelector('.notif-list');
         if (listEl) {
             const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = renderNotifItem({ ...notif, read: false });
+            tempDiv.innerHTML = renderNotifItem(notif); // autoRead varsa notif.read = true geleceği için unread classı almayacak
             const newItem = tempDiv.firstElementChild;
             newItem.style.opacity = '0';
             newItem.style.transform = 'translateX(-8px)';
@@ -565,7 +579,8 @@ function handleIncomingNotification(notif) {
 
             newItem.addEventListener('click', (e) => {
                 if (e.target.closest('.notif-action-btn')) return;
-                handleNotifClick(newItem.dataset.id, newItem.dataset.link, true, newItem.dataset.type);
+                // DÜZELTİLDİ: DOM elementi geçiriliyor
+                handleNotifClick(newItem.dataset.id, newItem.dataset.link, newItem.classList.contains('unread'), newItem.dataset.type, newItem);
             });
             newItem.querySelector('[data-action="read"]')?.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -591,6 +606,28 @@ function setWsStatus(status) {
         dot.className   = 'ws-dot disconnected';
         label.textContent = 'Çevrimdışı';
     }
+}
+
+// ═══════════════════════════════════════════════════════════
+// CHAT WIDGET ENTEGRASYONU (YENİ)
+// ═══════════════════════════════════════════════════════════
+function setupChatWidgetIntegration() {
+    // Chat widget içinde bir konuşmaya (.cw-conv) tıklandığında (yani mesaj okunduğunda)
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.cw-conv')) {
+            // Widget'ın mesajları yüklemesi ve okundu işaretlemesi için kısa bir bekleme
+            setTimeout(() => {
+                // Bildirim sayfasında bulunan okunmamış "NEW_MESSAGE" bildirimlerini bul ve okundu yap
+                const unreadMsgNotifs = document.querySelectorAll('.notif-item.unread[data-type="NEW_MESSAGE"]');
+                unreadMsgNotifs.forEach(rowEl => {
+                    const id = rowEl.dataset.id;
+                    if (id) {
+                        markRead(id, rowEl); // Görseli ve sayacı anında temizler
+                    }
+                });
+            }, 500);
+        }
+    });
 }
 
 // ═══════════════════════════════════════════════════════════
