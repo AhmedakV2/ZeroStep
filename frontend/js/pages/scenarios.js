@@ -31,9 +31,9 @@ function checkPermissions() {
 }
 
 function setupEventListeners() {
-    const searchInput = document.getElementById('filter-search');
+    const searchInput  = document.getElementById('filter-search');
     const statusFilter = document.getElementById('filter-status');
-    const newBtn = document.getElementById('btn-new-scenario');
+    const newBtn       = document.getElementById('btn-new-scenario');
 
     if (searchInput && typeof Utils.debounce === 'function') {
         searchInput.addEventListener('input', Utils.debounce(() => {
@@ -64,9 +64,8 @@ function setupEventListeners() {
 async function loadScenarios() {
     const search = document.getElementById('filter-search')?.value || '';
     const status = document.getElementById('filter-status')?.value || '';
-    const tbody = document.getElementById('scenarios-list');
+    const tbody  = document.getElementById('scenarios-list');
 
-    // Yükleniyor durumu
     if (tbody) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center p-8"><span class="mini-spinner" style="margin-right: 8px;"></span> Senaryolar yükleniyor...</td></tr>`;
     }
@@ -80,11 +79,9 @@ async function loadScenarios() {
             sort: 'createdAt,desc'
         });
 
-        // ApiResponse sarmalayıcısını (wrapper) GÜVENLİ AÇMA İŞLEMİ
-        const data = (response && response.data && response.data.content !== undefined)
+        const data  = (response && response.data && response.data.content !== undefined)
             ? response.data
             : (response || {});
-
         const items = data.content || (Array.isArray(data) ? data : []);
 
         renderTable(items);
@@ -115,7 +112,7 @@ function renderTable(scenarios) {
 
     tbody.innerHTML = scenarios.map(s => {
         const canEdit = !Auth.hasRole('VIEWER') || Auth.hasRole('ADMIN') || Auth.hasRole('TESTER');
-        const status = s.status || 'DRAFT';
+        const status  = s.status || 'DRAFT';
 
         return `
             <tr>
@@ -127,7 +124,8 @@ function renderTable(scenarios) {
                 <td>${Utils.escHtml(s.ownerUsername || 'Bilinmiyor')}</td>
                 <td>${s.createdAt ? Utils.formatDate(s.createdAt) : '—'}</td>
                 <td class="text-right actions-cell">
-                    <button class="btn btn-icon" onclick="window.openScenarioDetail('${Utils.escHtml(s.publicId)}')" title="Detay">👁</button>
+                    <!-- Detay butonu: göz ikonu yerine sağ üst köşe oku -->
+                    <button class="btn btn-icon" onclick="window.openScenarioDetail('${Utils.escHtml(s.publicId)}')" title="Detaya Git" style="font-size:1.05rem; color:var(--clr-primary);">&#8599;</button>
                     ${canEdit ? `
                         <div class="dropdown-container" style="position:relative;display:inline-block">
                             <button class="btn btn-icon" onclick="window.toggleActionsMenu(this)" title="Daha Fazla">⋯</button>
@@ -146,7 +144,7 @@ function renderTable(scenarios) {
 
 // ═══════════════════════════════════════════════════════════ DROPDOWN
 window.toggleActionsMenu = (btn) => {
-    const menu = btn.nextElementSibling;
+    const menu   = btn.nextElementSibling;
     const isOpen = menu.style.display === 'flex' || menu.style.display === 'grid';
     document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
     if (!isOpen && menu) menu.style.display = 'flex';
@@ -165,7 +163,6 @@ window.openScenarioDetail = (publicId) => {
 window.editScenario = async (publicId) => {
     try {
         const response = await Api.get(`/scenarios/${publicId}`);
-        // Backend'den gelen cevabı güvenli aç
         const scenario = response.data ? response.data : response;
         openScenarioEditModal(scenario);
     } catch (err) {
@@ -174,14 +171,15 @@ window.editScenario = async (publicId) => {
 };
 
 function openScenarioEditModal(scenario = null) {
-    const isEdit = !!scenario;
-    const tagsValue = scenario?.tags?.join(',') || '';
+    const isEdit     = !!scenario;
+    const tagsValue  = scenario?.tags?.join(',') || '';
+    const curStatus  = scenario?.status || 'DRAFT';
 
     const content = `
         <form id="scenario-form" class="mt-3">
             <div class="form-group mb-4">
                 <label class="form-label">Senaryo Adı *</label>
-                <input type="text" name="name" class="form-input" value="${Utils.escHtml(scenario?.name || '')}" 
+                <input type="text" name="name" class="form-input" value="${Utils.escHtml(scenario?.name || '')}"
                     required minlength="3" maxlength="255">
             </div>
 
@@ -189,14 +187,14 @@ function openScenarioEditModal(scenario = null) {
                 <div class="form-group">
                     <label class="form-label">Durum</label>
                     <select name="status" class="form-input">
-                        <option value="DRAFT" ${scenario?.status === 'DRAFT' ? 'selected' : ''}>Taslak (DRAFT)</option>
-                        <option value="READY" ${scenario?.status === 'READY' || !scenario ? 'selected' : ''}>Hazır (READY)</option>
-                        <option value="ARCHIVED" ${scenario?.status === 'ARCHIVED' ? 'selected' : ''}>Arşivli (ARCHIVED)</option>
+                        <option value="DRAFT"    ${curStatus === 'DRAFT'    ? 'selected' : ''}>Taslak (DRAFT)</option>
+                        <option value="READY"    ${curStatus === 'READY'    ? 'selected' : ''}>Hazır (READY)</option>
+                        <option value="ARCHIVED" ${curStatus === 'ARCHIVED' ? 'selected' : ''}>Arşivli (ARCHIVED)</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Base URL</label>
-                    <input type="url" name="baseUrl" class="form-input" value="${Utils.escHtml(scenario?.baseUrl || '')}" 
+                    <input type="url" name="baseUrl" class="form-input" value="${Utils.escHtml(scenario?.baseUrl || '')}"
                         placeholder="https://example.com">
                 </div>
             </div>
@@ -214,7 +212,7 @@ function openScenarioEditModal(scenario = null) {
             <div class="divider"></div>
 
             <h4 class="mb-3" style="margin-top: 1.5rem;">Browser Ayarları</h4>
-            
+
             <div class="form-group mb-3">
                 <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
                     <input type="checkbox" name="headless" ${scenario?.browserConfig?.headless ? 'checked' : ''}>
@@ -225,19 +223,19 @@ function openScenarioEditModal(scenario = null) {
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
                 <div class="form-group">
                     <label class="form-label">Viewport Genişliği</label>
-                    <input type="number" name="viewportWidth" class="form-input" 
+                    <input type="number" name="viewportWidth" class="form-input"
                         value="${scenario?.browserConfig?.viewportWidth || 1920}" min="800" max="3840">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Viewport Yüksekliği</label>
-                    <input type="number" name="viewportHeight" class="form-input" 
+                    <input type="number" name="viewportHeight" class="form-input"
                         value="${scenario?.browserConfig?.viewportHeight || 1080}" min="600" max="2160">
                 </div>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Bekleme Süresi (saniye)</label>
-                <input type="number" name="waitSeconds" class="form-input" 
+                <input type="number" name="waitSeconds" class="form-input"
                     value="${scenario?.browserConfig?.defaultWaitSeconds || 5}" min="1" max="60">
             </div>
         </form>
@@ -249,7 +247,7 @@ function openScenarioEditModal(scenario = null) {
         confirmLabel: 'Kaydet',
         size: 'md',
         onConfirm: async () => {
-            await saveScenario(scenario?.publicId || null);
+            await saveScenario(scenario?.publicId || null, isEdit);
         }
     });
 
@@ -261,7 +259,7 @@ function setupTagInput() {
     if (!container) return;
 
     const tagsStr = container.getAttribute('data-tags') || '';
-    const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
+    const tags    = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
     window._currentTags = tags;
 
     function render() {
@@ -271,8 +269,8 @@ function setupTagInput() {
                 <button type="button" onclick="window.removeTag('${Utils.escHtml(tag)}')" title="Sil">✕</button>
             </div>
         `).join('') + `
-            <input type="text" placeholder="Etiket ekle ve Enter'a bas..." 
-                onkeydown="window.handleTagKeydown(event)" 
+            <input type="text" placeholder="Etiket ekle ve Enter'a bas..."
+                onkeydown="window.handleTagKeydown(event)"
                 autocomplete="off">
         `;
     }
@@ -291,7 +289,7 @@ window.handleTagKeydown = (e) => {
     if (e.key === 'Enter') {
         e.preventDefault();
         const input = e.target;
-        const tag = input.value.trim();
+        const tag   = input.value.trim();
         if (tag && !window._currentTags.includes(tag)) {
             window._currentTags.push(tag);
             setupTagInput();
@@ -299,37 +297,73 @@ window.handleTagKeydown = (e) => {
     }
 };
 
-async function saveScenario(publicId) {
+async function saveScenario(publicId, isEdit) {
     const form = Modal.getElement('#scenario-form');
     if (!form) return;
 
-    const formData = new FormData(form);
-
-    // Checkbox değerini güvenli şekilde al
+    const formData   = new FormData(form);
     const isHeadless = form.querySelector('input[name="headless"]')?.checked || false;
+    const baseUrl    = formData.get('baseUrl')?.trim() || null;
+    const status     = formData.get('status') || 'DRAFT';
 
     const payload = {
-        name: formData.get('name'),
+        name:        formData.get('name'),
         description: formData.get('description'),
-        baseUrl: formData.get('baseUrl'),
-        status: formData.get('status'),
+        baseUrl,
+        status,
         tags: window._currentTags || [],
         browserConfig: {
-            headless: isHeadless,
-            viewportWidth: parseInt(formData.get('viewportWidth')) || 1920,
-            viewportHeight: parseInt(formData.get('viewportHeight')) || 1080,
-            defaultWaitSeconds: parseInt(formData.get('waitSeconds')) || 5
+            headless:          isHeadless,
+            viewportWidth:     parseInt(formData.get('viewportWidth'))  || 1920,
+            viewportHeight:    parseInt(formData.get('viewportHeight')) || 1080,
+            defaultWaitSeconds: parseInt(formData.get('waitSeconds'))   || 5
         }
     };
 
     try {
-        if (publicId) {
-            await Api.patch(`/scenarios/${publicId}`, payload);
+        let scenarioResponse;
+
+        if (isEdit && publicId) {
+            // Güncelleme: önce temel alanları patch et
+            await Api.patch(`/scenarios/${publicId}`, {
+                name:          payload.name,
+                description:   payload.description,
+                baseUrl:       payload.baseUrl,
+                browserConfig: payload.browserConfig,
+                tags:          payload.tags
+            });
+
+            // Durum değiştiyse ayrı endpoint
+            const current = await Api.get(`/scenarios/${publicId}`);
+            const currentStatus = (current?.data || current)?.status;
+            if (currentStatus && currentStatus !== status) {
+                await Api.patch(`/scenarios/${publicId}/status`, { status });
+            }
+
             Toast.success("Senaryo güncellendi");
         } else {
-            await Api.post('/scenarios', payload);
+            // Yeni senaryo oluştur
+            const raw = await Api.post('/scenarios', payload);
+            scenarioResponse = raw?.data || raw;
+
+            // BaseURL verilmişse otomatik NAVIGATE adımı ekle
+            if (baseUrl && scenarioResponse?.publicId) {
+                try {
+                    await Api.post(`/scenarios/${scenarioResponse.publicId}/steps`, {
+                        actionType:  'NAVIGATE',
+                        inputValue:  baseUrl,
+                        description: 'Ana sayfaya git',
+                        enabled:     true
+                    });
+                } catch (stepErr) {
+                    // Adım eklenemese bile senaryo oluştu; sessiz devam et
+                    console.warn('NAVIGATE adımı eklenemedi:', stepErr.message);
+                }
+            }
+
             Toast.success("Senaryo oluşturuldu");
         }
+
         Modal.close();
         loadScenarios();
     } catch (err) {
