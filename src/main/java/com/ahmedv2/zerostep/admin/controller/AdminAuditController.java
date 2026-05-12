@@ -9,9 +9,9 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,17 +30,21 @@ public class AdminAuditController {
     public ApiResponse<Page<AdminAuditResponse>> listAuditLogs(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String action, // Frontend'den 'action' olarak geliyor
-            @PageableDefault(size = 15, sort = "occurredAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+
+        // Sort'u descending olarak ayarla
+        Pageable pageable = PageRequest.of(page, size, Sort.by("occurredAt").descending());
 
         Page<AuditEvent> events;
 
         if (search != null && !search.isBlank()) {
-            events = auditEventRepository.findByActorNameContainingIgnoreCaseOrderByOccurredAtDesc(search, pageable);
+            events = auditEventRepository.findByActorNameContainingIgnoreCase(search, pageable);
         } else if (action != null && !action.isBlank()) {
             // 'action' parametresini 'eventType' sütununda arıyoruz
-            events = auditEventRepository.findByEventTypeOrderByOccurredAtDesc(action, pageable);
+            events = auditEventRepository.findByEventType(action, pageable);
         } else {
-            events = auditEventRepository.findByOrderByOccurredAtDesc(pageable);
+            events = auditEventRepository.findAll(pageable);
         }
 
         // Entity -> DTO Dönüşümü

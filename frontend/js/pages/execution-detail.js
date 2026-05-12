@@ -254,6 +254,7 @@ function tryOpenSSE() {
 
     try {
         eventSource = new EventSource(sseUrl);
+        window.currentSSE = eventSource;  // Global referans ata
     } catch (e) {
         appendLog('error', 'EventSource açılamadı: ' + e.message);
         updateSseStatus('closed');
@@ -289,6 +290,7 @@ function tryOpenSSE() {
         } catch {}
 
         closeSSE();
+        stopPolling();
         updateSseStatus('closed');
         // Veriyi yenile
         await loadExecution();
@@ -317,6 +319,7 @@ function closeSSE() {
         eventSource.close();
         eventSource = null;
     }
+    window.currentSSE = null;  // Global referansı temizle
 }
 
 // ─── Polling Fallback ──────────────────────────────────────
@@ -368,7 +371,7 @@ function startPolling() {
 }
 
 function stopPolling() {
-    if (pollingTimer) {
+    if (pollingTimer !== null && pollingTimer !== undefined) {
         clearInterval(pollingTimer);
         pollingTimer = null;
     }

@@ -22,7 +22,12 @@
     var initialized    = false;
     var selectedUserId = null;
 
-    // --- GİZLENEN SOHBETLERİ LOCALSTORAGE'DAN YÜKLE ---
+    // ── GİZLENEN SOHBETLERİ LOCALSTORAGE'DAN YÜKLE ──────────────────────
+    // NOT: localStorage artifact/private browsing ortamlarında desteklenmez.
+    // UZUN VADE: Backend API'ye taşınacak:
+    //   POST   /api/v1/chat/conversations/{id}/hide
+    //   DELETE /api/v1/chat/conversations/{id}/hide
+    //   GET    /api/v1/chat/conversations?hidden=false (varsayılan)
     var hiddenConversations = [];
     try {
         var storedHidden = localStorage.getItem('cw_hidden_convs');
@@ -30,13 +35,19 @@
             hiddenConversations = JSON.parse(storedHidden);
         }
     } catch (e) {
+        // localStorage kullanılamaz (artifact, private mode vb.)
+        console.warn('[ChatWidget] localStorage kullanılamadı:', e.message);
         hiddenConversations = [];
     }
 
     function saveHiddenConvs() {
         try {
             localStorage.setItem('cw_hidden_convs', JSON.stringify(hiddenConversations));
-        } catch (e) {}
+        } catch (e) {
+            // Sessiz fail — sayfada hata göstermiyoruz
+            // Seansın geri kalanında hiddenConversations in-memory kalır
+            console.warn('[ChatWidget] localStorage yazılamadı:', e.message);
+        }
     }
 
     // ── Yardımcı Fonksiyonlar ──────────────────────────────
@@ -571,9 +582,11 @@
     }
 
     function hideConversation(cid, elementRow) {
+        // Gizli konuşmalar listesine ekle (localStorage'da kalıcı)
+        // TODO: Backend API'ye taşınacak (POST /api/v1/chat/conversations/{id}/hide)
         if (!hiddenConversations.includes(cid)) {
             hiddenConversations.push(cid);
-            saveHiddenConvs(); // Kalıcı olarak kaydet
+            saveHiddenConvs(); // localStorage'a yaz (fail-safe try/catch ile)
         }
 
         var currentHeight = elementRow.offsetHeight;
@@ -970,7 +983,13 @@
         toggle:       toggle,
         open:         open,
         close:        close,
-        updateBadge:  updateBadge
+        updateBadge:  updateBadge,
+        disconnect:   function() {
+            if (stompClient && stompClient.connected) {
+                stompClient.disconnect();
+                wsConnected = false;
+            }
+        }
     };
 
     if (document.readyState === 'loading') {

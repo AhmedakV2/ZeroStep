@@ -5,6 +5,7 @@ import com.ahmedv2.zerostep.extension.security.ExtensionTokenAuthenticationFilte
 import com.ahmedv2.zerostep.ratelimit.RateLimitFilter;
 import com.ahmedv2.zerostep.security.filter.JwtAuthenticationFilter;
 import com.ahmedv2.zerostep.security.filter.PasswordChangeRequiredFilter;
+import com.ahmedv2.zerostep.security.filter.CspNonceFilter;
 import com.ahmedv2.zerostep.security.handler.JsonAccessDeniedHandler;
 import com.ahmedv2.zerostep.security.handler.JsonAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ public class SecurityConfig {
     private final JsonAccessDeniedHandler accessDeniedHandler;
     private final UserDetailsService userDetailsService;
     private final RateLimitFilter rateLimitFilter;
+    private final CspNonceFilter cspNonceFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -76,12 +78,7 @@ public class SecurityConfig {
                         .httpStrictTransportSecurity(hsts -> hsts
                                 .includeSubDomains(true)
                                 .maxAgeInSeconds(31536000))
-                        .contentSecurityPolicy(csp -> csp.policyDirectives(
-                                "default-src 'self'; " +
-                                        "script-src 'self' 'unsafe-inline'; " +
-                                        "style-src 'self' 'unsafe-inline'; " +
-                                        "img-src 'self' data:; " +
-                                        "connect-src 'self' ws: wss:"))
+                        // CSP header Spring Security tarafından SET EDİLMEYECEK — CspNonceFilter handle edecek
                         .referrerPolicy(ref -> ref.policy(
                                 org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter
                                         .ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
@@ -120,6 +117,8 @@ public class SecurityConfig {
                 )
 
                 // Filter zinciri sırası önemli:
+                // 0. CSP Nonce (her response'a nonce-based CSP header ekle — en başta)
+                .addFilterBefore(cspNonceFilter, UsernamePasswordAuthenticationFilter.class)
                 // 1. Extension token (X-AFT-Token header)
                 .addFilterBefore(extensionTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 // 2. JWT token (Authorization: Bearer veya ?token= query param)

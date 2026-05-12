@@ -81,15 +81,15 @@ public class ReportService {
         double avgDuration = 0.0;
 
         try {
-            Object rawAgg = executionRepo.findAggregatesByScenario(scenarioPublicId);
-
-            // Spring JPQL COUNT+AVG her zaman Object[] döner ama log edelim
-            if (rawAgg instanceof Object[] arr) {
-                totalRuns     = arr[0] != null ? ((Number) arr[0]).longValue()   : 0L;
-                avgDuration   = arr[1] != null ? ((Number) arr[1]).doubleValue() : 0.0;
+            // DTO projection — typ güvenli, Object[] cast gerekmez
+            var aggResult = executionRepo.findAggregatesByScenario(scenarioPublicId);
+            if (aggResult.isPresent()) {
+                var result = aggResult.get();
+                totalRuns = result.getCount() != null ? result.getCount() : 0L;
+                avgDuration = result.getAvg() != null ? result.getAvg() : 0.0;
             }
         } catch (Exception e) {
-            // Gerçek hatayı backend log'una yaz
+            // Aggregation hatası — log edelim ama UI patlatmayalım
             throw new RuntimeException("findAggregatesByScenario failed: " + e.getMessage(), e);
         }
 

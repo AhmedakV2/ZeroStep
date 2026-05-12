@@ -22,6 +22,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -137,8 +138,11 @@ public class ScheduledJobRunner {
         for (int i = 0; i < 360; i++) {
             try {
                 Thread.sleep(5_000L);
-                Execution exec = executionRepository.findById(executionId).orElse(null);
-                if (exec != null && exec.getStatus().isTerminal()) return exec;
+                Optional<ExecutionStatus> status = executionRepository.findStatusById(executionId);
+                if (status.isPresent() && status.get().isTerminal()) {
+                    // Terminal durumda full entity yükle
+                    return executionRepository.findById(executionId).orElse(null);
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return null;

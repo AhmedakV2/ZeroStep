@@ -14,6 +14,12 @@ import java.util.UUID;
 
 public interface ExecutionRepository extends JpaRepository<Execution, Long> {
 
+    // ── DTO Projection Interface ────────────────────────────
+    interface ExecutionAggregateResult {
+        Long getCount();
+        Double getAvg();
+    }
+
     // Execution + tüm lazy ilişkileri tek sorguda yükler; ExecutionRunner kullanır
     @Query("""
         SELECT e FROM Execution e
@@ -89,12 +95,16 @@ public interface ExecutionRepository extends JpaRepository<Execution, Long> {
             Pageable pageable
     );
 
-    // Senaryo için toplam çalıştırma sayısı ve ortalama süre; COALESCE null guard
+    // Senaryo için toplam çalıştırma sayısı ve ortalama süre; DTO projection ile tip güvenliğini sağla
     @Query("""
-        SELECT COUNT(e), COALESCE(AVG(e.durationMs), 0)
+        SELECT COUNT(e) as count, COALESCE(AVG(e.durationMs), 0) as avg
         FROM Execution e
         WHERE e.scenario.publicId = :scenarioPublicId
           AND e.status IN ('COMPLETED','FAILED','CANCELLED','TIMEOUT')
         """)
-    Object[] findAggregatesByScenario(@Param("scenarioPublicId") UUID scenarioPublicId);
+    Optional<ExecutionAggregateResult> findAggregatesByScenario(@Param("scenarioPublicId") UUID scenarioPublicId);
+
+    // Status'u direk query ile çek (lazy loading problemi yok, virtual thread safe)
+    @Query("SELECT e.status FROM Execution e WHERE e.id = :id")
+    Optional<ExecutionStatus> findStatusById(@Param("id") Long id);
 }

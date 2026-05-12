@@ -105,7 +105,7 @@ const Api = (() => {
             const qs = params && Object.keys(params).length
                 ? '?' + new URLSearchParams(
                 Object.fromEntries(
-                    Object.entries(params).filter(([, v]) => v != null)
+                    Object.entries(params).filter(([, v]) => v !== null && v !== undefined)
                 )
             ).toString()
                 : '';

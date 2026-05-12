@@ -1,3 +1,17 @@
+// ── CSP NONCE İNİSYALİZASYONU ─────────────────────────────────
+// Server tarafından gönderilen nonce'u meta tag'dan oku ve window'a ekle
+// Sonra inline script'ler bu nonce'u kullanabilir
+(function() {
+    const nonceEl = document.querySelector('meta[id="csp-nonce"]');
+    if (nonceEl && nonceEl.content) {
+        window._cspNonce = nonceEl.content;
+        // Debug: CSP nonce başarıyla yüklendiğini logla
+        console.log('[CSP] Nonce initialized:', window._cspNonce.substring(0, 8) + '...');
+    } else {
+        console.warn('[CSP] Nonce meta tag not found or empty');
+    }
+})();
+
 // ── TEMA FLASH ÖNLEME (Erken İnisiyalizasyon) ────────────────
 // Bu script main.css hemen sonrasında yüklenir ve DOM yüklenmeyi beklemez.
 // Amaç: body rendering başlamadan önce tema class'ını ekleyerek FOUC'u önlemek.

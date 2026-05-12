@@ -102,7 +102,7 @@ const FormUtils= {
         if(!fieldErrors || !Array.isArray(fieldErrors)) return;
 
         fieldErrors.forEach(err => {
-            const input = formEl.quarySelector(`[name="${err.field}"]`);
+            const input = formEl.querySelector(`[name="${err.field}"]`);
             if(input) {
                 input.classList.add('is-error');
 
@@ -113,15 +113,15 @@ const FormUtils= {
     },
 
     setLoading(buttonEl, isLoading) {
-        if (buttonEl) return;
-        if ( isLoading ) {
-            buttonEl.disebled = true;
+        if (!buttonEl) return;
+        if (isLoading) {
+            buttonEl.disabled = true;
             buttonEl.dataset.originText = buttonEl.innerHTML;
             buttonEl.innerHTML = '<span class="spinner"></span> Lütfen bekleyin...';
-        }else {
-            buttonEl.disable = false;
-            if(buttonEl.dataset.originText) {
-                buttonEl.innerHtml = buttonEl.dataset.originText;
+        } else {
+            buttonEl.disabled = false;
+            if (buttonEl.dataset.originText) {
+                buttonEl.innerHTML = buttonEl.dataset.originText;
             }
         }
     }

@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AuditEventRepository extends JpaRepository<AuditEvent, Long> {
 
-    Page<AuditEvent> findByOrderByOccurredAtDesc(Pageable pageable);
-    Page<AuditEvent> findByEventTypeOrderByOccurredAtDesc(String eventType, Pageable pageable);
-    Page<AuditEvent> findByActorNameContainingIgnoreCaseOrderByOccurredAtDesc(String actorName, Pageable pageable);
+    Page<AuditEvent> findAll(Pageable pageable);
+    Page<AuditEvent> findByEventType(String eventType, Pageable pageable);
+    Page<AuditEvent> findByActorNameContainingIgnoreCase(String actorName, Pageable pageable);
 }
