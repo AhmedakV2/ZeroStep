@@ -67,7 +67,7 @@ async function loadRecentExecutions() {
     const tbody = document.getElementById('executions-body');
 
     try {
-        const raw = await Api.get('/reports', { size: 10, sort: 'startedAt,desc' });
+        const raw = await Api.get('/reports', { size: 10 });
         let items = [];
 
         if (raw?.content) items = raw.content;

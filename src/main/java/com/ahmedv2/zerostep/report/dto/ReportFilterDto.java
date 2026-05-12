@@ -9,8 +9,6 @@ public record ReportFilterDto(
         String scenarioName,
         String status,
         String username,
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-        Instant fromDate,
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-        Instant toDate
+        String fromDate,
+        String toDate
 ) {}

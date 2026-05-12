@@ -105,7 +105,6 @@ function buildCleanParams() {
     const params = {
         page: currentPage,
         size: pageSize,
-        sort: 'startedAt,desc',
     };
 
     const scenarioEl = document.getElementById('filter-scenario');

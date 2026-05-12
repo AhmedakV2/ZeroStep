@@ -72,22 +72,18 @@ public interface ExecutionRepository extends JpaRepository<Execution, Long> {
      * statusIsNull=true ise status filtresi uygulanmaz.
      */
     @Query("""
-        SELECT e FROM Execution e
-        JOIN e.scenario s
-        JOIN s.owner o
-        WHERE (:scenarioName = '' OR LOWER(s.name) LIKE LOWER(CONCAT('%', :scenarioName, '%')))
-          AND (:statusIsNull = true OR e.status = :status)
-          AND (:username = '' OR o.username = :username)
-          AND (e.startedAt IS NULL OR e.startedAt >= :fromDate)
-          AND (e.startedAt IS NULL OR e.startedAt <= :toDate)
-        """)
+    SELECT e FROM Execution e
+    JOIN e.scenario s
+    JOIN s.owner o
+    WHERE (:scenarioName = '' OR LOWER(s.name) LIKE LOWER(CONCAT('%', :scenarioName, '%')))
+      AND (:statusIsNull = true OR e.status = :status)
+      AND (:username = '' OR o.username = :username)
+    """)
     Page<Execution> findAllFiltered(
             @Param("scenarioName") String scenarioName,
             @Param("status")       ExecutionStatus status,
             @Param("statusIsNull") boolean statusIsNull,
             @Param("username")     String username,
-            @Param("fromDate")     Instant fromDate,
-            @Param("toDate")       Instant toDate,
             Pageable pageable
     );
 

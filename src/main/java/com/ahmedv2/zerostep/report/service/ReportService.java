@@ -57,27 +57,22 @@ public class ReportService {
     public Page<ReportListItemDto> listReports(ReportFilterDto filter, Pageable pageable) {
         String scenarioName = filter.scenarioName() != null ? filter.scenarioName().trim() : "";
 
-        // Status null ise veritabanında patlamaması için bayrak (flag) kullanıyoruz
         ExecutionStatus executionStatus = null;
         boolean statusIsNull = true;
         if (filter.status() != null && !filter.status().isBlank()) {
-            executionStatus = ExecutionStatus.valueOf(filter.status());
-            statusIsNull = false;
+            try {
+                executionStatus = ExecutionStatus.valueOf(filter.status());
+                statusIsNull = false;
+            } catch (IllegalArgumentException ignored) {}
         }
 
         String username = filter.username() != null ? filter.username() : "";
 
-        // NULL TARİH KRİZİNE SON: Değer gelmezse 1970 ile 2999 arasını aratıyoruz
-        Instant fromDate = filter.fromDate() != null ? filter.fromDate() : Instant.EPOCH;
-        Instant toDate = filter.toDate() != null ? filter.toDate() : Instant.parse("2999-12-31T23:59:59Z");
-
         return executionRepo.findAllFiltered(
                 scenarioName,
                 executionStatus,
-                statusIsNull, // SQL'deki hata üreten IS NULL kontrolünün yerini aldı
+                statusIsNull,
                 username,
-                fromDate,
-                toDate,
                 pageable
         ).map(this::toListItem);
     }

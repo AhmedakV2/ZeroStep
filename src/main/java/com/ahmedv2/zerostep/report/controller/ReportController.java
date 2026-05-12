@@ -9,6 +9,7 @@ import com.ahmedv2.zerostep.report.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -66,7 +67,7 @@ public class ReportController {
     @PreAuthorize("hasAnyRole('TESTER','ADMIN')")
     public ResponseEntity<ApiResponse<Page<ReportListItemDto>>> listReports(
             @ModelAttribute ReportFilterDto filter,
-            @PageableDefault(size = 20) Pageable pageable) {
+            @PageableDefault(size = 20, sort = "queuedAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(ApiResponse.ok(reportService.listReports(filter, pageable)));
     }
 

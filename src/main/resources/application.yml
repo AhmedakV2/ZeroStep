@@ -7,6 +7,13 @@ spring:
     allow-bean-definition-overriding: false
     banner-mode: console
 
+  # Eklenen Bölüm: Pagination ayarları
+  data:
+    web:
+      pageable:
+        default-page-size: 20
+        one-indexed-parameters: false
+
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
