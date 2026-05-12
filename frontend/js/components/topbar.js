@@ -20,6 +20,9 @@ const Topbar = (() => {
             ? (user.displayName || user.username || '?').slice(0, 2).toUpperCase()
             : '?';
 
+        // Görünen ad varsa onu, yoksa kullanıcı adını al
+        const displayText = user ? (user.displayName || user.username || '') : '';
+
         container.innerHTML = `
             <div class="topbar-left" style="display: flex; align-items: center;">
                 
@@ -45,7 +48,7 @@ const Topbar = (() => {
                 <div style="position:relative;">
                     <div class="topbar-user" id="topbar-user-menu-trigger">
                         <div class="topbar-avatar">${initials}</div>
-                        <span class="topbar-username">${user?.username || ''}</span>
+                        <span class="topbar-username">${Utils.escHtml(displayText)}</span>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="6 9 12 15 18 9"/>
                         </svg>

@@ -58,6 +58,10 @@ async function loadProfile() {
         const user = await Api.get('/users/me');
         if (!user) throw new Error('Boş yanıt');
 
+        // Backend'den en güncel veri geldiğinde Store'u ve Topbar'ı senkronize et
+        Store.setUser(user);
+        Topbar.render('topbar', 'Ayarlar');
+
         setText('prof-username', user.username);
         setText('prof-email', user.email);
         setText('prof-display', user.displayName || '(belirtilmemiş)');
@@ -116,6 +120,14 @@ function setupProfileEditing() {
             setText('prof-display', updated.displayName || val);
             const av = document.getElementById('prof-avatar');
             if (av) av.textContent = val.slice(0, 2).toUpperCase();
+
+            // --- STORE VE TOPBAR SENKRONİZASYONU ---
+            const currentUser = Store.getUser() || {};
+            const newUser = { ...currentUser, ...updated, displayName: updated.displayName || val };
+            Store.setUser(newUser);
+            Topbar.render('topbar', 'Ayarlar'); // Topbar'daki avatar ve ismi anında güncelle
+            // ---------------------------------------
+
             showSaved('saved-displayName');
             clearUnsaved();
             Toast.success('Görünen ad güncellendi.');
@@ -143,6 +155,14 @@ function setupProfileEditing() {
         try {
             const updated = await Api.patch('/users/me', { email: val });
             setText('prof-email', updated.email || val);
+
+            // --- STORE SENKRONİZASYONU ---
+            const currentUser = Store.getUser() || {};
+            const newUser = { ...currentUser, ...updated, email: updated.email || val };
+            Store.setUser(newUser);
+            // E-posta değişimi Topbar'ı genelde etkilemez ama veriyi güncel tuttuk.
+            // ---------------------------------------
+
             showSaved('saved-email');
             clearUnsaved();
             Toast.success('E-posta güncellendi.');
@@ -322,8 +342,15 @@ async function loadNotificationPrefs() {
             </div>`;
         }).join('');
 
-        container.querySelectorAll('.channel-chip').forEach(chip => {
-            chip.addEventListener('click', () => chip.classList.toggle('active'));
+        container.querySelectorAll('.channel-chip input[type="checkbox"]').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const chip = e.target.closest('.channel-chip');
+                if (e.target.checked) {
+                    chip.classList.add('active');
+                } else {
+                    chip.classList.remove('active');
+                }
+            });
         });
 
     } catch (err) {

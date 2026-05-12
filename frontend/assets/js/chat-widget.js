@@ -221,7 +221,7 @@
             '</div>' +
             '<div id="cw-new-wrap">' +
             '<div class="cw-new-row">' +
-            '<input class="cw-new-inp" id="cw-new-inp" type="text" placeholder="Kullanıcı adı ara..." autocomplete="off">' +
+            '<input class="cw-new-inp" id="cw-new-inp" type="text" placeholder="İsim veya kullanıcı adı ara..." autocomplete="off">' +
             '<button class="cw-new-btn" id="cw-new-go">Başlat</button>' +
             '</div>' +
             '<div id="cw-user-results"></div>' +
@@ -312,8 +312,8 @@
             return;
         }
 
-        // Backend: GET /api/v1/admin/users?search=q
-        Api.get('/admin/users', { search: q, size: 10 }).then(function (raw) {
+        // Backend: GET /api/v1/users?search=q (Admin endpoint'i yerine genel endpoint kullanıldı)
+        Api.get('/users', { search: q, size: 10 }).then(function (raw) {
             var items = raw && raw.content ? raw.content : (Array.isArray(raw) ? raw : []);
 
             // Kendimizi çıkar
@@ -354,9 +354,8 @@
             });
 
         }).catch(function (err) {
-            var msg = (err && err.status === 403)
-                ? 'Kullanıcı araması Admin yetkisi gerektirir.'
-                : 'Hata: ' + esc((err && err.message) || '');
+            // Admin uyarısı kaldırıldı, genel hata mesajı eklendi
+            var msg = 'Kullanıcılar getirilemedi: ' + esc((err && err.message) || 'Yetkisiz erişim veya sunucu hatası.');
             resultsEl.innerHTML =
                 '<div class="cw-urow" style="cursor:default;color:var(--clr-text-muted);font-size:.75rem;">' +
                 msg + '</div>';
@@ -472,9 +471,18 @@
 
         var list = filter ? conversations.filter(function (c) {
             var other = c.otherUser || {};
-            var name  = (other.username || other.displayName || '').toLowerCase();
-            return name.indexOf(filter) !== -1 ||
-                (c.lastMessagePreview || '').toLowerCase().indexOf(filter) !== -1;
+
+            // --- DEĞİŞTİRİLEN KISIM BAŞLANGICI ---
+            var uName = (other.username || '').toLowerCase();
+            var dName = (other.displayName || '').toLowerCase();
+            var preview = (c.lastMessagePreview || '').toLowerCase();
+
+            // Hem kayıtlı kullanıcı adında hem de görünen adda bağımsız olarak arama yapar
+            return uName.indexOf(filter) !== -1 ||
+                dName.indexOf(filter) !== -1 ||
+                preview.indexOf(filter) !== -1;
+            // --- DEĞİŞTİRİLEN KISIM BİTİŞİ ---
+
         }) : conversations;
 
         if (!list.length) {
