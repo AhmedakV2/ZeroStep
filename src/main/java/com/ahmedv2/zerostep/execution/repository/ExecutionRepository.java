@@ -78,8 +78,8 @@ public interface ExecutionRepository extends JpaRepository<Execution, Long> {
         WHERE (:scenarioName = '' OR LOWER(s.name) LIKE LOWER(CONCAT('%', :scenarioName, '%')))
           AND (:statusIsNull = true OR e.status = :status)
           AND (:username = '' OR o.username = :username)
-          AND (e.startedAt >= :fromDate)
-          AND (e.startedAt <= :toDate)
+          AND (e.startedAt IS NULL OR e.startedAt >= :fromDate)
+          AND (e.startedAt IS NULL OR e.startedAt <= :toDate)
         """)
     Page<Execution> findAllFiltered(
             @Param("scenarioName") String scenarioName,

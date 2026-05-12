@@ -65,7 +65,7 @@ public class ReportController {
     @GetMapping
     @PreAuthorize("hasAnyRole('TESTER','ADMIN')")
     public ResponseEntity<ApiResponse<Page<ReportListItemDto>>> listReports(
-            ReportFilterDto filter,
+            @ModelAttribute ReportFilterDto filter,
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(ApiResponse.ok(reportService.listReports(filter, pageable)));
     }
