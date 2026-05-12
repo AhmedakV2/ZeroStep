@@ -1,5 +1,9 @@
 /* CSS custom property'leri — tüm tema buradan yönetilir */
 :root {
+    color-scheme: dark; /* Tarayıcı bileşenlerini (takvim, select) karanlık temaya zorlar */
+    --form-scheme: dark; /* Inputların koyu modda kalmasını sağlar */
+    --clr-option-bg: #25252b; /* Koyu tema açılır menü arkaplanı */
+
     /* Füme Cam Arka Planlar */
     --clr-bg:          #121214;
     --clr-surface:     rgba(18, 18, 20, 0.65);
@@ -98,12 +102,15 @@ ul, ol { list-style: none; }
 /* ── Light Theme ────────────────────────────────────────── */
 body.theme-light,
 html.theme-light {
+    color-scheme: light; /* Light tema aktifken tarayıcı bileşenlerini açık renge zorlar */
+    --form-scheme: light; /* Input takvim ikonlarını açık moda (siyaha) geçirir */
+    --clr-option-bg: #ffffff; /* Açık tema açılır menü arkaplanı (beyaz) */
+
     --clr-bg:          #f0f2f7;
     --clr-surface:     #ffffff;
     --clr-surface-2:   #f0f2f7;
     --clr-border:      #d8dce8;
-    --clr-border-focus:#3d7aed;
+    --clr-border-focus: rgba(158, 134, 232, 0.6);
     --clr-text:        #1a1f2e;
     --clr-text-muted:  #6b7592;
 }
-
