@@ -9,4 +9,5 @@ public interface AuditEventRepository extends JpaRepository<AuditEvent, Long> {
 
     Page<AuditEvent> findByOrderByOccurredAtDesc(Pageable pageable);
     Page<AuditEvent> findByEventTypeOrderByOccurredAtDesc(String eventType, Pageable pageable);
+    Page<AuditEvent> findByActorNameContainingIgnoreCaseOrderByOccurredAtDesc(String actorName, Pageable pageable);
 }

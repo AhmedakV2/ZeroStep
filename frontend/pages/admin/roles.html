@@ -18,8 +18,6 @@
             animation: pageItemFadeUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .delay-1 { animation-delay: 0.08s; }
-        .delay-2 { animation-delay: 0.16s; }
-        .delay-3 { animation-delay: 0.24s; }
         @keyframes pageItemFadeUp { to { opacity: 1; transform: translateY(0); } }
 
         .page-bg {
@@ -29,6 +27,22 @@
                     radial-gradient(ellipse 50% 40% at 85% 70%, rgba(158, 134, 232, 0.03) 0%, transparent 55%);
         }
         .page-content { position: relative; z-index: 1; }
+
+        .construction-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 70vh;
+            text-align: center;
+        }
+
+        .construction-icon {
+            font-size: 3.5rem;
+            color: #9e86e8;
+            margin-bottom: 1.5rem;
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
@@ -40,41 +54,16 @@
     <header class="topbar" id="topbar" role="banner"></header>
 
     <main class="main-content page-content">
-        <div class="stagger-item delay-1" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-            <h2 class="page-title" style="margin: 0;">Rol Yönetimi</h2>
-            <button class="btn btn-primary" id="create-role-btn">
-                <i class="fas fa-plus"></i> Yeni Rol
-            </button>
+        <div class="construction-wrapper stagger-item delay-1">
+            <i class="fas fa-person-digging construction-icon"></i>
+            <h2>Üzerinde Çalışılıyor</h2>
+            <p style="color: var(--text-secondary, #6b7280); max-width: 400px; margin-top: 10px;">
+                Rol yönetimi modülü geliştirme aşamasındadır.
+            </p>
         </div>
-
-        <div class="card filter-bar mt-4 stagger-item delay-2">
-            <div class="form-group mb-0">
-                <input type="text" class="form-input" id="role-search" placeholder="Rol adı ile ara..." style="max-width: 350px;">
-            </div>
-        </div>
-
-        <div class="card p-0 mt-4 stagger-item delay-3">
-            <div class="table-wrapper">
-                <table class="data-table">
-                    <thead>
-                    <tr>
-                        <th>Rol Adı</th>
-                        <th>Açıklama</th>
-                        <th>Kullanıcı Sayısı</th>
-                        <th>Oluşturulma Tarihi</th>
-                        <th style="text-align: right;">İşlemler</th>
-                    </tr>
-                    </thead>
-                    <tbody id="roles-body">
-                    <tr><td colspan="5" class="text-center p-8">Yükleniyor...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div id="pagination-container" class="mt-4"></div>
     </main>
 </div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 <script src="../../assets/js/chat-widget.js"></script>
@@ -84,11 +73,10 @@
 <script src="../../assets/js/router.js"></script>
 <script src="../../assets/js/api.js"></script>
 <script src="../../assets/js/auth.js"></script>
+
 <script src="../../js/components/sidebar.js"></script>
 <script src="../../js/components/topbar.js"></script>
-<script src="../../js/components/pagination.js"></script>
-<script src="../../js/components/modal.js"></script>
-<script src="../../js/components/confirm-dialog.js"></script>
+
 <script src="../../js/pages/admin-roles.js"></script>
 </body>
 </html>

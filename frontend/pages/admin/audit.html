@@ -41,31 +41,29 @@
     <header class="topbar" id="topbar" role="banner"></header>
 
     <main class="main-content page-content">
-        <!-- Başlık -->
-        <div class="stagger-item delay-1" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-            <h2 class="page-title" style="margin: 0;">Denetim Günlükleri</h2>
+        <div class="stagger-item delay-1" style="display: flex; justify-content: flex-end; width: 100%;">
             <button class="btn btn-ghost" id="export-audit-btn">
                 <i class="fas fa-download"></i> Dışa Aktar
             </button>
         </div>
 
-        <!-- Filtreler -->
         <div class="card filter-bar mt-4 stagger-item delay-2">
             <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
                 <div class="form-group mb-0" style="flex: 1; min-width: 200px;">
-                    <input type="text" class="form-input" id="audit-search" placeholder="Kullanıcı adı veya işlem ara...">
+                    <input type="text" class="form-input" id="audit-search" placeholder="Kullanıcı adı veya kaynak ara...">
                 </div>
                 <div class="form-group mb-0" style="flex: 1; min-width: 150px;">
                     <select class="form-input" id="audit-action-filter">
                         <option value="">Tüm İşlemler</option>
-                        <option value="CREATE">Oluşturma</option>
-                        <option value="UPDATE">Güncelleme</option>
-                        <option value="DELETE">Silme</option>
-                        <option value="LOGIN">Giriş</option>
+                        <option value="USER_CREATED">Kullanıcı Oluşturma</option>
+                        <option value="USER_UPDATED">Kullanıcı Güncelleme</option>
+                        <option value="USER_DELETED">Kullanıcı Silme</option>
+                        <option value="LOGIN_SUCCESS">Başarılı Giriş</option>
+                        <option value="LOGIN_FAILED">Hatalı Giriş</option>
                     </select>
                 </div>
                 <div class="form-group mb-0" style="flex: 1; min-width: 150px;">
-                    <input type="date" class="form-input" id="audit-date-filter">
+                    <input type="date" class="form-input" id="audit-date-filter" title="Belirli bir tarih">
                 </div>
                 <button class="btn btn-primary" id="apply-filters-btn">
                     <i class="fas fa-filter"></i> Filtrele
@@ -73,7 +71,6 @@
             </div>
         </div>
 
-        <!-- Tablo -->
         <div class="card p-0 mt-4 stagger-item delay-3">
             <div class="table-wrapper">
                 <table class="data-table">
@@ -98,6 +95,7 @@
         <div id="pagination-container" class="mt-4 stagger-item delay-4"></div>
     </main>
 </div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 <script src="../../assets/js/chat-widget.js"></script>
