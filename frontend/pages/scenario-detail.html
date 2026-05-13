@@ -87,8 +87,8 @@
             overflow: hidden;
             background-color: var(--clr-bg);
             background-image:
-                linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+                    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
             background-size: 24px 24px;
         }
         .diagram-surface { position:absolute;inset:0;overflow:hidden; }
@@ -136,9 +136,16 @@
         }
         .node-port {
             position:absolute;width:10px;height:10px;border-radius:50%;
-            background:var(--clr-surface);border:2px solid var(--clr-border);transition:border-color .15s;
+            background:var(--clr-surface);border:2px solid var(--clr-border);
+            transition:all .2s; cursor: crosshair;
         }
-        .node-port:hover { border-color:var(--clr-primary); }
+        .node-port:hover { border-color:var(--clr-primary); transform:translateY(-50%) scale(1.3); }
+        .node-port.highlight {
+            background:var(--clr-primary);
+            border-color:var(--clr-primary);
+            transform:translateY(-50%) scale(1.6);
+            box-shadow: 0 0 0 4px rgba(61,122,237,.2);
+        }
         .port-in  { top:50%;left:-6px;transform:translateY(-50%); }
         .port-out { top:50%;right:-6px;transform:translateY(-50%); }
         #connections-svg { position:absolute;inset:0;pointer-events:none;overflow:visible; }
@@ -274,7 +281,6 @@
 
     <main class="main-content" style="padding:0;overflow:hidden;">
 
-        <!-- Üst bar -->
         <div class="scenario-topbar">
             <nav class="breadcrumb">
                 <a href="scenarios.html">Senaryolar</a>
@@ -299,10 +305,8 @@
             </div>
         </div>
 
-        <!-- 3 sütunlu editör -->
         <div class="step-editor-shell">
 
-            <!-- SOL -->
             <div class="tool-palette">
                 <div class="tool-palette-header">
                     <input type="text" class="tool-palette-search" id="action-search"
@@ -316,7 +320,6 @@
                 </div>
             </div>
 
-            <!-- ORTA -->
             <div class="step-canvas-wrap">
 
                 <div id="diagram-canvas">
@@ -335,12 +338,10 @@
                 </div>
 
                 <div id="table-canvas">
-                    <!-- JS tarafından doldurulur -->
                 </div>
 
             </div>
 
-            <!-- SAĞ -->
             <div class="step-props">
                 <div class="props-header">
                     <span class="props-title">Adım Özellikleri</span>
@@ -361,7 +362,6 @@
     </main>
 </div>
 
-<!-- Context menu -->
 <div class="node-menu hidden" id="node-context-menu">
     <button class="node-menu-item" id="ctx-select">Seç / Düzenle</button>
     <button class="node-menu-item" id="ctx-duplicate">Kopyala</button>
@@ -369,14 +369,13 @@
     <button class="node-menu-item danger" id="ctx-delete">Sil</button>
 </div>
 
-<!-- Kısayol paneli -->
 <div class="shortcut-panel hidden" id="shortcut-panel">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.55rem;">
         <span class="shortcut-panel-title">Klavye Kısayolları</span>
         <button class="btn-icon" id="btn-shortcuts-close" style="font-size:.8rem;">✕</button>
     </div>
     <div class="shortcut-row"><span>Araç Paleti</span><kbd>T</kbd></div>
-    <div class="shortcut-row"><span>Özellikler</span><kbd>P</kbd></div>
+    <div class="shortcut-row"><span>Özellikler</span><kbd>P / Db.Click</kbd></div>
     <div class="shortcut-row"><span>Kaydet</span><kbd>Ctrl+S</kbd></div>
     <div class="shortcut-row"><span>Seçili Adımı Sil</span><kbd>Delete</kbd></div>
     <div class="shortcut-row"><span>Seçili Adımı Kopyala</span><kbd>D</kbd></div>
@@ -385,7 +384,7 @@
     <div class="shortcut-row"><span>Menüyü Kapat</span><kbd>Esc</kbd></div>
     <div style="margin-top:.55rem;padding-top:.55rem;border-top:1px solid var(--clr-border);
         font-size:.68rem;color:var(--clr-text-muted);line-height:1.6;">
-        Diyagram: <kbd>Ctrl+Tekerlek</kbd> zoom &nbsp;|&nbsp; <kbd>Space+Sürükle</kbd> kaydır
+        Diyagram: <kbd>Ctrl+Tekerlek</kbd> zoom &nbsp;|&nbsp; <kbd>Sol Tık+Sürükle</kbd> kaydır
     </div>
 </div>
 <script src="../assets/js/utils.js"></script>

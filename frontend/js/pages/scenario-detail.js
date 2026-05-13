@@ -15,9 +15,14 @@ let viewMode          = 'diagram';
 let panX = 0, panY = 0, zoom = 1;
 let isPanning  = false, panStartX = 0, panStartY = 0;
 
-// Canvas içi node sürükleme
+// Canvas içi node sürükleme & Görsel Durumlar
 let dragNodeId  = null, dragOffsetX = 0, dragOffsetY = 0;
 let nodePositions = {};
+let visuallyDisconnected = new Set(); // Yeni eklenenlerin otomatik bağlanmasını engeller
+
+// Bağlantı (Connection) sürükleme durumları
+let isConnecting = false;
+let connectSourceId = null;
 
 // Auto-save
 let autoSaveTimer = null;
@@ -32,6 +37,31 @@ let ctxMenuBound = false;
 let ctxTargetId  = null;
 
 // ═══════════════════════════════════════════════════════════
+// YEREL HAFIZA (LOCAL/SESSION STORAGE)
+// ═══════════════════════════════════════════════════════════
+
+function loadDiagramState() {
+    if (!scenarioPublicId) return;
+    try {
+        const raw = localStorage.getItem(`diagram_state_${scenarioPublicId}`);
+        if (raw) {
+            const state = JSON.parse(raw);
+            if (state.positions) nodePositions = state.positions;
+            if (state.disconnected) visuallyDisconnected = new Set(state.disconnected);
+        }
+    } catch (e) {}
+}
+
+function saveDiagramState() {
+    if (!scenarioPublicId) return;
+    const state = {
+        positions: nodePositions,
+        disconnected: Array.from(visuallyDisconnected)
+    };
+    localStorage.setItem(`diagram_state_${scenarioPublicId}`, JSON.stringify(state));
+}
+
+// ═══════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════
 (async function init() {
@@ -40,6 +70,14 @@ let ctxTargetId  = null;
     const params = new URLSearchParams(window.location.search);
     scenarioPublicId = params.get('id');
     if (!scenarioPublicId) { Toast.error('Senaryo ID bulunamadı'); return; }
+
+    // Kayıtlı diyagram konumlarını ve kopuk düğümleri yükle
+    loadDiagramState();
+
+    // Tam ekran durumu sessionStorage'da kayıtlıysa otomatik aç
+    if (sessionStorage.getItem('scenario_fullscreen') === 'true') {
+        toggleFullscreen(true);
+    }
 
     Sidebar.render('sidebar');
     Topbar.render('topbar', 'Senaryo Detayı');
@@ -61,7 +99,6 @@ let ctxTargetId  = null;
 
 async function loadScenario() {
     try {
-        // API wrapper'ı düz obje döner (ApiResponse<ScenarioResponse> → .data)
         const raw = await Api.get(`/scenarios/${scenarioPublicId}`);
         scenarioData = raw?.publicId ? raw : (raw?.data ?? raw);
 
@@ -81,9 +118,7 @@ async function loadScenario() {
 
 async function loadActionMetadata() {
     try {
-        // GET /api/v1/steps/action-metadata → ApiResponse<List<ActionMetadataResponse>>
         const raw = await Api.get('/steps/action-metadata');
-        // api.js zaten .data'yı döndürüyor; yine de array kontrolü yap
         actionMetadata = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
         renderToolPalette(actionMetadata);
     } catch (err) {
@@ -94,7 +129,6 @@ async function loadActionMetadata() {
 
 async function loadSteps() {
     try {
-        // GET /api/v1/scenarios/{id}/steps → ApiResponse<List<TestStepResponse>>
         const raw = await Api.get(`/scenarios/${scenarioPublicId}/steps`);
         steps = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
         steps.sort((a, b) => a.stepOrder - b.stepOrder);
@@ -199,12 +233,17 @@ function renderDiagram() {
     const viewport = document.getElementById('diagram-viewport');
     [...viewport.children].forEach(el => { if (el.id !== 'connections-svg') el.remove(); });
 
+    let positionsChanged = false;
     steps.forEach((step, idx) => {
-        if (!nodePositions[step.publicId])
+        if (!nodePositions[step.publicId]) {
             nodePositions[step.publicId] = { x: 60 + idx * 280, y: 80 };
+            positionsChanged = true;
+        }
         const { x, y } = nodePositions[step.publicId];
         viewport.appendChild(createNode(step, x, y, idx + 1));
     });
+
+    if (positionsChanged) saveDiagramState();
 
     renderConnections();
     applyTransform();
@@ -235,18 +274,46 @@ function createNode(step, x, y, orderNum) {
 
     node.addEventListener('click', e => {
         if (e.target.closest('.node-menu-btn')) return;
-        selectStep(step.publicId);
+
+        selectedStepId = step.publicId;
+        document.querySelectorAll('.step-node').forEach(n =>
+            n.classList.toggle('selected', n.dataset.id === step.publicId));
+
+        document.querySelectorAll('#step-tbody tr[data-id]').forEach(r =>
+            r.classList.toggle('selected-row', r.dataset.id === step.publicId));
+
+        if (propertiesVisible) {
+            renderPropsPanel(step);
+        }
     });
+
+    node.addEventListener('dblclick', e => {
+        if (e.target.closest('.node-menu-btn')) return;
+
+        if (propertiesVisible) {
+            toggleProperties();
+        } else {
+            renderPropsPanel(step);
+            toggleProperties();
+        }
+    });
+
     node.querySelector('.node-menu-btn').addEventListener('click', e => {
         e.stopPropagation();
         showNodeContextMenu(e, step.publicId);
     });
+
     node.addEventListener('contextmenu', e => {
         e.preventDefault();
         showNodeContextMenu(e, step.publicId);
     });
+
     node.addEventListener('mousedown', e => {
         if (e.target.closest('.node-menu-btn') || e.button !== 0) return;
+
+        // Eğer porta tıklanırsa kutuyu sürüklemeye başlama (bağlantı başlat)
+        if (e.target.classList.contains('node-port')) return;
+
         dragNodeId = step.publicId;
         const sr = document.querySelector('.diagram-surface').getBoundingClientRect();
         dragOffsetX = e.clientX - (sr.left + x * zoom + panX);
@@ -261,9 +328,18 @@ function renderConnections() {
     const svg = document.getElementById('connections-svg');
     svg.innerHTML = '';
     for (let i = 0; i < steps.length - 1; i++) {
-        const fp = nodePositions[steps[i].publicId];
-        const tp = nodePositions[steps[i+1].publicId];
+        const current = steps[i];
+        const next = steps[i+1];
+
+        // EĞER düğümlerden biri henüz manuel bağlanmamışsa (kopuksa) çizgiyi ES GEÇ
+        if (visuallyDisconnected.has(current.publicId) || visuallyDisconnected.has(next.publicId)) {
+            continue;
+        }
+
+        const fp = nodePositions[current.publicId];
+        const tp = nodePositions[next.publicId];
         if (!fp || !tp) continue;
+
         const x1=fp.x+220, y1=fp.y+38, x2=tp.x, y2=tp.y+38, cp=(x2-x1)/2;
         const path = document.createElementNS('http://www.w3.org/2000/svg','path');
         path.setAttribute('class','conn-path');
@@ -276,13 +352,32 @@ function setupCanvasInteraction() {
     const surface = document.querySelector('.diagram-surface');
 
     surface.addEventListener('mousedown', e => {
-        if (e.button === 1 || (e.button === 0 && e.getModifierState('Space'))) {
-            isPanning=true; panStartX=e.clientX-panX; panStartY=e.clientY-panY;
-            surface.style.cursor='grabbing'; e.preventDefault();
+        // BAĞLANTI (CONNECTION) BAŞLATMA
+        if (e.target.classList.contains('port-out')) {
+            isConnecting = true;
+            connectSourceId = e.target.closest('.step-node').dataset.id;
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+
+        // Tıklanan yer bir adımsa, pan başlatma
+        if (e.target.closest('.step-node')) return;
+
+        // Sol tık, orta tık veya Space ile kaydırmayı başlat
+        if (e.button === 0 || e.button === 1 || (e.button === 0 && e.getModifierState('Space'))) {
+            isPanning = true;
+            panStartX = e.clientX - panX;
+            panStartY = e.clientY - panY;
+            surface.style.cursor = 'grabbing';
+            e.preventDefault();
         }
     });
+
     window.addEventListener('mousemove', e => {
         if (isPanning) { panX=e.clientX-panStartX; panY=e.clientY-panStartY; applyTransform(); }
+
+        // Kutu sürükleme
         if (dragNodeId) {
             const sr = document.querySelector('.diagram-surface').getBoundingClientRect();
             const nx=(e.clientX-sr.left-dragOffsetX-panX)/zoom;
@@ -292,11 +387,74 @@ function setupCanvasInteraction() {
             if (nd) { nd.style.left=nx+'px'; nd.style.top=ny+'px'; }
             renderConnections();
         }
+
+        // Porttan porta geçici çizgi çizme
+        if (isConnecting && connectSourceId) {
+            const sr = document.querySelector('.diagram-surface').getBoundingClientRect();
+            const mouseX = (e.clientX - sr.left - panX) / zoom;
+            const mouseY = (e.clientY - sr.top - panY) / zoom;
+
+            const sp = nodePositions[connectSourceId];
+            if (sp) {
+                const x1 = sp.x + 220; // Out Port
+                const y1 = sp.y + 38;
+                const cp = Math.abs(mouseX - x1) / 2;
+
+                let svg = document.getElementById('connections-svg');
+                let tempPath = document.getElementById('temp-connection');
+                if (!tempPath) {
+                    tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    tempPath.id = 'temp-connection';
+                    tempPath.setAttribute('class', 'conn-path');
+                    tempPath.style.stroke = 'var(--clr-primary)';
+                    tempPath.style.strokeDasharray = '5 5';
+                    tempPath.style.pointerEvents = 'none';
+                    svg.appendChild(tempPath);
+                }
+                tempPath.setAttribute('d', `M${x1},${y1} C${x1+cp},${y1} ${mouseX-cp},${mouseY} ${mouseX},${mouseY}`);
+            }
+
+            // Port In üzerine gelindiğinde hover efekti
+            document.querySelectorAll('.port-in').forEach(p => p.classList.remove('highlight'));
+            const portIn = document.elementFromPoint(e.clientX, e.clientY)?.closest('.port-in');
+            if (portIn) portIn.classList.add('highlight');
+        }
     });
-    window.addEventListener('mouseup', () => {
+
+    window.addEventListener('mouseup', e => {
         if (isPanning) { isPanning=false; surface.style.cursor=''; }
-        dragNodeId=null;
+        if (dragNodeId) {
+            dragNodeId = null;
+            saveDiagramState(); // Sürükleme bittikten sonra konumu localStorage'a kaydet
+        }
+
+        // Bağlantıyı serbest bırakma ve API'yi çağırma
+        if (isConnecting) {
+            const tempPath = document.getElementById('temp-connection');
+            if (tempPath) tempPath.remove();
+
+            document.querySelectorAll('.port-in').forEach(p => p.classList.remove('highlight'));
+
+            const portIn = document.elementFromPoint(e.clientX, e.clientY)?.closest('.port-in');
+            if (portIn) {
+                const targetNode = portIn.closest('.step-node');
+                const targetId = targetNode.dataset.id;
+
+                // Kendine bağlamasını engelle
+                if (targetId && targetId !== connectSourceId) {
+                    // Bağlantı manuel kurulduğuna göre kopuklukları kaldır
+                    visuallyDisconnected.delete(targetId);
+                    visuallyDisconnected.delete(connectSourceId);
+                    saveDiagramState();
+                    reorderFromDiagram(connectSourceId, targetId);
+                }
+            }
+
+            isConnecting = false;
+            connectSourceId = null;
+        }
     });
+
     surface.addEventListener('wheel', e => {
         if (!e.ctrlKey) return;
         e.preventDefault();
@@ -308,6 +466,30 @@ function setupCanvasInteraction() {
 function applyTransform() {
     document.getElementById('diagram-viewport').style.transform =
         `translate(${panX}px,${panY}px) scale(${zoom})`;
+}
+
+// ── Diyagram üzerinden sıralamayı güncelleyen API çağrısı ──
+async function reorderFromDiagram(sourceId, targetId) {
+    const payload = {
+        afterStepPublicId: sourceId
+    };
+
+    try {
+        const raw = await Api.patch(`/steps/${targetId}/reorder`, payload);
+        const updated = raw?.publicId ? raw : (raw?.data ?? raw);
+
+        const idx = steps.findIndex(s => s.publicId === targetId);
+        if (idx !== -1) steps[idx].stepOrder = updated.stepOrder;
+
+        steps.sort((a, b) => a.stepOrder - b.stepOrder);
+        renderAll();
+
+        setAutosaveState('saved');
+        Toast.success('Bağlantı güncellendi');
+    } catch (err) {
+        Toast.error('Bağlantı değiştirilemedi: ' + err.message);
+        await loadSteps(); // Hata olursa listeyi sunucudan yenile
+    }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -480,11 +662,14 @@ async function doCreateStep(body, dropX, dropY) {
         vp.appendChild(tmp);
     }
     try {
-        // POST /api/v1/scenarios/{id}/steps → ApiResponse<TestStepResponse>
         const newStep = await Api.post(`/scenarios/${scenarioPublicId}/steps`, body);
-        // api.js .data'yı unwrap ediyor, ama publicId kontrolü yap
         const step = newStep?.publicId ? newStep : (newStep?.data ?? newStep);
+
+        // Yeni adım eklendiğinde kopuk başlar, otomatik çizgi gitmez
         nodePositions[step.publicId] = { x: dropX, y: dropY };
+        visuallyDisconnected.add(step.publicId);
+        saveDiagramState();
+
         steps.push(step);
         steps.sort((a,b) => a.stepOrder - b.stepOrder);
         renderAll();
@@ -598,8 +783,36 @@ function initTableDragSort() {
             else if (btn.dataset.action === 'delete')    deleteStep(btn.dataset.id);
             return;
         }
+
         const row = e.target.closest('tr[data-id]');
-        if (row) selectStep(row.dataset.id);
+        if (row) {
+            const step = steps.find(s => s.publicId === row.dataset.id);
+            if (!step) return;
+
+            selectedStepId = step.publicId;
+            document.querySelectorAll('.step-node').forEach(n => n.classList.toggle('selected', n.dataset.id === step.publicId));
+            document.querySelectorAll('#step-tbody tr[data-id]').forEach(r => r.classList.toggle('selected-row', r.dataset.id === step.publicId));
+
+            if (propertiesVisible) renderPropsPanel(step);
+        }
+    });
+
+    tbody.addEventListener('dblclick', e => {
+        const btn = e.target.closest('button[data-action]');
+        if (btn) return;
+
+        const row = e.target.closest('tr[data-id]');
+        if (row) {
+            const step = steps.find(s => s.publicId === row.dataset.id);
+            if (!step) return;
+
+            if (propertiesVisible) {
+                toggleProperties();
+            } else {
+                renderPropsPanel(step);
+                toggleProperties();
+            }
+        }
     });
 
     tbody.querySelectorAll('tr[draggable]').forEach(row => {
@@ -662,11 +875,15 @@ async function reorderFromTable() {
     if (!payload.afterStepPublicId && !payload.beforeStepPublicId) return;
 
     try {
-        // PATCH /api/v1/steps/{id}/reorder → ApiResponse<TestStepResponse>
         const raw = await Api.patch(`/steps/${movedId}/reorder`, payload);
         const updated = raw?.publicId ? raw : (raw?.data ?? raw);
         const idx = steps.findIndex(s => s.publicId === movedId);
         if (idx !== -1) steps[idx].stepOrder = updated.stepOrder;
+
+        // Tabloda manuel sıra değişirse kopukluğu kaldır
+        visuallyDisconnected.delete(movedId);
+        saveDiagramState();
+
         steps.sort((a,b) => a.stepOrder - b.stepOrder);
         renderAll();
         setAutosaveState('saved');
@@ -811,7 +1028,6 @@ async function saveStepProps(id) {
     const body = buildPropsPayload();
     if (!body) return;
     try {
-        // PATCH /api/v1/steps/{id} → ApiResponse<TestStepResponse>
         const raw = await Api.patch(`/steps/${id}`, body);
         const updated = raw?.publicId ? raw : (raw?.data ?? raw);
         const idx = steps.findIndex(s => s.publicId === id);
@@ -887,11 +1103,15 @@ function setupPropsActions() {
 
 window.duplicateStep = async function(publicId) {
     try {
-        // POST /api/v1/steps/{id}/duplicate → ApiResponse<TestStepResponse>
         const raw = await Api.post(`/steps/${publicId}/duplicate`, {});
         const ns = raw?.publicId ? raw : (raw?.data ?? raw);
         const orig = nodePositions[publicId];
         nodePositions[ns.publicId] = orig ? {x:orig.x+30,y:orig.y+30} : {x:60+steps.length*280,y:80};
+
+        // Kopyalananları da kopuk işaretle
+        visuallyDisconnected.add(ns.publicId);
+        saveDiagramState();
+
         steps.push(ns);
         steps.sort((a,b) => a.stepOrder - b.stepOrder);
         renderAll(); selectStep(ns.publicId); Toast.success('Adım kopyalandı');
@@ -906,10 +1126,14 @@ window.deleteStep = function(publicId) {
         message: `"${meta.displayName||step?.actionType}" adımını silmek istediğinize emin misiniz?`,
         confirmLabel: 'Sil',
         onConfirm: async () => {
-            // DELETE /api/v1/steps/{id}
             await Api.del(`/steps/${publicId}`);
             steps = steps.filter(s => s.publicId !== publicId);
+
+            // Silinenleri hafızadan temizle
             delete nodePositions[publicId];
+            visuallyDisconnected.delete(publicId);
+            saveDiagramState();
+
             if (selectedStepId === publicId) {
                 selectedStepId = null;
                 document.getElementById('props-actions').style.display = 'none';
@@ -1029,8 +1253,17 @@ function updateShellGrid() {
     shell.style.gridTemplateColumns = `${left} 1fr ${right}`;
 }
 
-function toggleFullscreen() {
-    fullscreenActive = !fullscreenActive;
+// forceState parametresi ile tam ekran durumu sessionStorage ile senkronize ediliyor
+function toggleFullscreen(forceState) {
+    if (forceState !== undefined) {
+        fullscreenActive = forceState;
+    } else {
+        fullscreenActive = !fullscreenActive;
+    }
+
+    // Durumu tarayıcı önbelleğine yaz
+    sessionStorage.setItem('scenario_fullscreen', fullscreenActive);
+
     const main = document.querySelector('main.main-content');
     if (!main) return;
     if (fullscreenActive) {
@@ -1040,7 +1273,10 @@ function toggleFullscreen() {
         main.style.cssText='padding:0;overflow:hidden;';
         document.querySelector('.step-editor-shell').style.height='';
     }
-    showShortcutToast('F', fullscreenActive ? 'Tam Ekran' : 'Normal Görünüm');
+
+    if (forceState === undefined) {
+        showShortcutToast('F', fullscreenActive ? 'Tam Ekran' : 'Normal Görünüm');
+    }
 }
 
 function jumpToStep(idx) {
@@ -1100,11 +1336,7 @@ async function runScenario() {
     btn.innerHTML = '<span class="spinner"></span> Çalışıyor...';
 
     try {
-        // POST /api/v1/scenarios/{id}/execute → HTTP 202 + ApiResponse<ExecutionResponse>
-        // api.js response.data'yı döndürüyor; execution publicId burada
         const response = await Api.post(`/scenarios/${scenarioPublicId}/execute`, {});
-
-        // response zaten unwrapped (publicId, status, vb. doğrudan)
         const execPublicId = response?.publicId || response?.data?.publicId;
 
         if (!execPublicId) {
