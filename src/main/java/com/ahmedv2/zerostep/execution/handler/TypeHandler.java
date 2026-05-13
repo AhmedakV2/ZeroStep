@@ -6,18 +6,13 @@ import com.ahmedv2.zerostep.step.entity.ActionType;
 import com.ahmedv2.zerostep.step.entity.TestStep;
 import lombok.RequiredArgsConstructor;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.stereotype.Component;
-
-import java.time.Duration;
 
 
 @Component
 @RequiredArgsConstructor
 public class TypeHandler implements ActionHandler {
 
-    private static final int DEFAULT_WAIT_SECONDS = 10;
     private final SelectorResolver selectorResolver;
 
     @Override
@@ -33,14 +28,13 @@ public class TypeHandler implements ActionHandler {
             throw new IllegalArgumentException("TYPE icin inputValue zorunlu");
         }
 
-        int waitSec = step.getConfig() != null && step.getConfig().getTimeoutSeconds() != null
-                ? step.getConfig().getTimeoutSeconds()
-                : DEFAULT_WAIT_SECONDS;
-
-        WebElement element = new WebDriverWait(context.getDriver(), Duration.ofSeconds(waitSec))
-                .until(ExpectedConditions.elementToBeClickable(by));
+        // Element tıklanabilir olana kadar bekle
+        WebElement element = WaitUtil.waitClickable(context.getDriver(), by, HandlerSupport.waitSeconds(step));
 
         context.logInfo("Typing into: " + by + " (length=" + value.length() + ")");
+
+        // Mevcut içeriği sil — üst üste yazma sorununu önler
+        element.clear();
         element.sendKeys(value);
     }
 }

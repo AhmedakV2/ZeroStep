@@ -7,11 +7,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/main.css">
-    <script src="../assets/js/theme-init.js"></script>    <script src="../assets/js/csp-helper.js"></script>
+    <script src="../assets/js/theme-init.js"></script>
+    <script src="../assets/js/csp-helper.js"></script>
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/layout.css">
     <style>
-        /* Sayfa giriş animasyonları */
         .stagger-item {
             opacity: 0;
             transform: translateY(18px);
@@ -26,32 +26,69 @@
         .page-bg {
             position: fixed; inset: 0; z-index: 0; pointer-events: none;
             background:
-                    radial-gradient(ellipse 70% 50% at 15% 30%, rgba(158, 134, 232, 0.05) 0%, transparent 60%),
-                    radial-gradient(ellipse 50% 40% at 85% 70%, rgba(158, 134, 232, 0.03) 0%, transparent 55%);
+                    radial-gradient(ellipse 70% 50% at 15% 30%, rgba(158,134,232,.05) 0%, transparent 60%),
+                    radial-gradient(ellipse 50% 40% at 85% 70%, rgba(158,134,232,.03) 0%, transparent 55%);
         }
         .page-content { position: relative; z-index: 1; }
 
         .exec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; }
-        .exec-stats { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 0.25rem; }
-        .stat { display: flex; flex-direction: column; gap: 0.2rem; }
-        .stat-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); letter-spacing: .04em; }
+        .exec-stats { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: .25rem; }
+        .stat { display: flex; flex-direction: column; gap: .2rem; }
+        .stat-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); letter-spacing: .04em; }
         .stat-value { font-size: 1rem; font-weight: 600; color: var(--clr-text); }
+
+        /* ── Adım listesi ── */
         .steps-list { list-style: none; padding: 0; margin: 0; max-height: 480px; overflow-y: auto; }
         .steps-list::-webkit-scrollbar { width: 4px; }
         .steps-list::-webkit-scrollbar-thumb { background: var(--clr-border); border-radius: 2px; }
-        .step-item { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem 0.875rem; border-bottom: 1px solid var(--clr-border); transition: background var(--transition); }
+
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: .6rem;
+            padding: .6rem .875rem;
+            border-bottom: 1px solid var(--clr-border);
+            transition: background var(--transition);
+            /* Taşmayı önle — flex child min-width hack */
+            min-width: 0;
+        }
         .step-item:last-child { border-bottom: none; }
         .step-item:hover { background: var(--clr-surface-2); }
-        .log-panel { background: #0a0c10; border-radius: var(--radius-sm); padding: 0.75rem; font-family: 'IBM Plex Mono', 'Consolas', monospace; height: 460px; overflow-y: auto; border: 1px solid var(--clr-border); }
+
+        /* step-item'ın esnek içerik alanı — uzun metinlerin taşmasını engeller */
+        .step-item > div {
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        /* ── Log paneli ── */
+        .log-panel {
+            background: #0a0c10;
+            border-radius: var(--radius-sm);
+            padding: .75rem;
+            font-family: 'IBM Plex Mono', 'Consolas', monospace;
+            height: 460px;
+            overflow-y: auto;
+            /* Yatay taşmayı kesin kapat — log satırları wrap etsin */
+            overflow-x: hidden;
+            border: 1px solid var(--clr-border);
+        }
         .log-panel::-webkit-scrollbar { width: 4px; }
         .log-panel::-webkit-scrollbar-thumb { background: var(--clr-border); border-radius: 2px; }
-        .sse-status-bar { display: flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; color: var(--clr-text-muted); }
-        .sse-dot { width: 7px; height: 7px; border-radius: 50%; background: #616161; flex-shrink: 0; transition: background 0.3s; }
-        @keyframes pulse-green { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(76,175,80,.4); } 50% { opacity: .7; box-shadow: 0 0 0 4px rgba(76,175,80,0); } }
+
+        .sse-status-bar { display: flex; align-items: center; gap: .4rem; font-size: .72rem; color: var(--clr-text-muted); }
+        .sse-dot { width: 7px; height: 7px; border-radius: 50%; background: #616161; flex-shrink: 0; transition: background .3s; }
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(76,175,80,.4); }
+            50%       { opacity: .7; box-shadow: 0 0 0 4px rgba(76,175,80,0); }
+        }
+
         .detail-card { background: var(--clr-surface); border: 1px solid var(--clr-border); border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); }
-        .detail-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.875rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--clr-border); }
-        .detail-card-title { font-size: 0.88rem; font-weight: 700; color: var(--clr-text); }
-        #exec-id-display { font-family: var(--font-ui); font-size: 0.72rem; color: var(--clr-text-muted); margin-top: 0.2rem; word-break: break-all; }
+        .detail-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .875rem; padding-bottom: .6rem; border-bottom: 1px solid var(--clr-border); }
+        .detail-card-title { font-size: .88rem; font-weight: 700; color: var(--clr-text); }
+
+        #exec-id-display { font-family: var(--font-ui); font-size: .72rem; color: var(--clr-text-muted); margin-top: .2rem; word-break: break-all; }
+
         @media (max-width: 900px) { .exec-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -64,7 +101,7 @@
     <header class="topbar" id="topbar"></header>
 
     <main class="main-content page-content">
-        <div style="padding: 1.5rem 2rem;">
+        <div style="padding:1.5rem 2rem;">
             <!-- Başlık -->
             <div class="stagger-item delay-1" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;gap:1rem;">
                 <div style="min-width:0;">
@@ -89,7 +126,7 @@
                 </div>
             </div>
 
-            <!-- Adımlar + Loglar grid -->
+            <!-- Adımlar + Loglar -->
             <div class="exec-grid">
                 <div class="detail-card stagger-item delay-3">
                     <div class="detail-card-header">
@@ -117,6 +154,7 @@
         </div>
     </main>
 </div>
+
 <script src="../assets/js/utils.js"></script>
 <script src="../assets/js/store.js"></script>
 <script src="../assets/js/toast.js"></script>
