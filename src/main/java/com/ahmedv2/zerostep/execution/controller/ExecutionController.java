@@ -152,45 +152,18 @@ public class ExecutionController {
     public ResponseEntity<Resource> getScreenshot(@PathVariable UUID publicId,
                                                   @PathVariable Long stepResultId,
                                                   Authentication auth) {
-        // Authorization
+        // Authorization: kullanicinin bu execution'i goruntuleme yetkisi var mi?
         executionService.getExecution(publicId, auth.getName(), extractRoles(auth));
 
-        var stepResult = stepResultRepository.findById(stepResultId)
-                .orElseThrow(() -> new ResourceNotFoundException("StepResult", stepResultId));
+        // Resmi ExecutionService uzerinden Resource olarak verimli sekilde al
+        Resource resource = executionService.getScreenshotResource(publicId, stepResultId);
 
-
-        if (!stepResult.getExecution().getPublicId().equals(publicId)) {
-            throw new ResourceNotFoundException("StepResult", stepResultId);
-        }
-
-        String path = stepResult.getScreenshotPath();
-        if (path == null || path.isBlank()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        Path filePath = Paths.get(path);
-        File file = filePath.toFile();
-        if (!file.exists() || !file.isFile()) {
-            log.warn("Screenshot dosyasi diskte yok: {}", path);
-            return ResponseEntity.notFound().build();
-        }
-
-        try {
-            // Standart Java Files class'ı kullanarak okuyoruz
-            byte[] bytes = Files.readAllBytes(filePath);
-            ByteArrayResource resource = new ByteArrayResource(bytes);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "inline; filename=\"screenshot-" + stepResultId + ".png\"")
-                    .contentType(MediaType.IMAGE_PNG)
-                    .contentLength(bytes.length)
-                    .body(resource);
-        } catch (Exception e) {
-            log.error("Screenshot okunamadi: {}", path, e);
-            return ResponseEntity.internalServerError().build();
-        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"screenshot-" + stepResultId + ".png\"")
+                .contentType(MediaType.IMAGE_PNG)
+                .body(resource);
     }
-
 
     private Set<String> extractRoles(Authentication auth) {
         return auth.getAuthorities().stream()

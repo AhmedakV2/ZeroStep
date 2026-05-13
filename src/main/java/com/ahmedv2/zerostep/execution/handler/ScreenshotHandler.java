@@ -33,19 +33,19 @@ public class ScreenshotHandler implements ActionHandler {
         TakesScreenshot ts = (TakesScreenshot) context.getDriver();
         File source = ts.getScreenshotAs(OutputType.FILE);
 
-        // Dosya adi: <execution-id>/<timestamp>_<step-public-id>.png
         Long execId = context.getExecution().getId();
         String fileName = TS.format(LocalDateTime.now()) + "_" + step.getPublicId() + ".png";
-        Path targetDir = Paths.get(appProperties.getExecution().getScreenshotDir(),
-                String.valueOf(execId));
+
+        Path targetDir = Paths.get(appProperties.getExecution().getScreenshotDir(), String.valueOf(execId));
         Path target = targetDir.resolve(fileName);
 
+        // FileUtils.copyFile, "targetDir" mevcut değilse bile klasörleri otomatik yaratır.
         FileUtils.copyFile(source, target.toFile());
 
-        // Step resulta path yaz; service detay sayfasinda gosterir
         if (context.getCurrentStepResult() != null) {
             context.getCurrentStepResult().setScreenshotPath(target.toString());
         }
-        context.logInfo("Screenshot saved: " + target);
+
+        context.logInfo("Ekran görüntüsü kaydedildi: " + target);
     }
 }
