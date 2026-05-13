@@ -1,6 +1,7 @@
 package com.ahmedv2.zerostep.execution.service;
 
 import com.ahmedv2.zerostep.audit.service.AuditService;
+import com.ahmedv2.zerostep.common.exception.BusinessException;
 import com.ahmedv2.zerostep.common.exception.ConflictException;
 import com.ahmedv2.zerostep.common.exception.ForbiddenException;
 import com.ahmedv2.zerostep.common.exception.ResourceNotFoundException;
@@ -18,6 +19,8 @@ import com.ahmedv2.zerostep.user.entity.User;
 import com.ahmedv2.zerostep.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.net.MalformedURLException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -99,15 +105,15 @@ public class ExecutionService {
          * KÖK NEDEN DÜZELTMESİ
          * ─────────────────────
          * Eski kod: executionRunner.run(savedId)
-         *   → @Async yeni thread'i HEMEN başlatır.
-         *   → Bu metod hâlâ @Transactional içinde → DB COMMIT olmadı.
-         *   → Runner findByIdWithAllRelations() ile sorguladığında
-         *     kayıt DB'de yok → "Execution bulunamadı: 14" hatası.
+         * → @Async yeni thread'i HEMEN başlatır.
+         * → Bu metod hâlâ @Transactional içinde → DB COMMIT olmadı.
+         * → Runner findByIdWithAllRelations() ile sorguladığında
+         * kayıt DB'de yok → "Execution bulunamadı: 14" hatası.
          *
          * Yeni kod: TransactionSynchronizationManager.registerSynchronization()
-         *   → afterCommit() hook'u transaction COMMIT'İNDEN SONRA çalışır.
-         *   → O an kayıt DB'de kesinlikle mevcut.
-         *   → @Async runner thread-safe biçimde başlatılır.
+         * → afterCommit() hook'u transaction COMMIT'İNDEN SONRA çalışır.
+         * → O an kayıt DB'de kesinlikle mevcut.
+         * → @Async runner thread-safe biçimde başlatılır.
          */
         TransactionSynchronizationManager.registerSynchronization(
                 new TransactionSynchronization() {
@@ -189,6 +195,36 @@ public class ExecutionService {
                         "username",   username));
 
         return toResponse(execution);
+    }
+
+    // ── Screenshot Resource ────────────────────────────────
+    @Transactional(readOnly = true)
+    public Resource getScreenshotResource(UUID executionId, Long stepResultId) {
+        ExecutionStepResult stepResult = stepResultRepository.findById(stepResultId)
+                .orElseThrow(() -> new ResourceNotFoundException("Adım sonucu bulunamadı."));
+
+        // StepResult'ın bu execution'a ait olup olmadığını kontrol et
+        if (!stepResult.getExecution().getPublicId().equals(executionId)) {
+            throw new ResourceNotFoundException("Adım sonucu bu çalıştırmaya ait değil.");
+        }
+
+        if (stepResult.getScreenshotPath() == null || stepResult.getScreenshotPath().isEmpty()) {
+            throw new ResourceNotFoundException("Bu adım için ekran görüntüsü kaydı yok.");
+        }
+
+        try {
+            // Veri tabanındaki dosya yolunu (screenshotPath) fiziksel yola dönüştür
+            Path filePath = Paths.get(stepResult.getScreenshotPath()).normalize();
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists() && resource.isReadable()) {
+                return resource;
+            } else {
+                throw new ResourceNotFoundException("Ekran görüntüsü dosyası diskte bulunamadı veya okunamıyor.");
+            }
+        } catch (MalformedURLException e) {
+            throw new ForbiddenException("Ekran görüntüsü dosya yolunda hata var: " + e.getMessage());
+        }
     }
 
     // ── Yardımcı ──────────────────────────────────────────

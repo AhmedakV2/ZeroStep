@@ -179,12 +179,36 @@ function renderSteps(stepsList) {
     }).join('');
 }
 
-function openScreenshot(stepId) {
-    const token = Store.getAccessToken();
-    window.open(
-        `${BACKEND_BASE}/executions/${execPublicId}/screenshots/${stepId}?token=${encodeURIComponent(token)}`,
-        '_blank'
-    );
+async function openScreenshot(stepId) {
+    try {
+        const token = Store.getAccessToken();
+        Toast.info('Ekran görüntüsü yükleniyor...', 2000); // Kullanıcıya bekleme hissi verelim
+
+        const res = await fetch(`${BACKEND_BASE}/executions/${execPublicId}/screenshots/${stepId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!res.ok) {
+            if (res.status === 404) throw new Error('Ekran görüntüsü dosyası bulunamadı.');
+            throw new Error(`HTTP ${res.status}: Sunucu hatası.`);
+        }
+
+        // Gelen yanıtı blob (resim dosyası) olarak al ve tarayıcıda geçici bir URL oluştur
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+
+        // Yeni sekmede aç
+        window.open(url, '_blank');
+
+        // Bellek sızıntısını (memory leak) önlemek için URL'i 1 dakika sonra temizle
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+    } catch (err) {
+        Toast.error('Hata: ' + err.message);
+    }
 }
 
 // ─── SSE Canlı Log ────────────────────────────────────────

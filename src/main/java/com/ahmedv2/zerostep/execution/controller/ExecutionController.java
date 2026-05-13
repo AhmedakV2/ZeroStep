@@ -13,7 +13,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -30,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -158,7 +158,7 @@ public class ExecutionController {
         var stepResult = stepResultRepository.findById(stepResultId)
                 .orElseThrow(() -> new ResourceNotFoundException("StepResult", stepResultId));
 
-        // StepResult bu execution'a ait mi? (yetki bypass'ini engelle)
+
         if (!stepResult.getExecution().getPublicId().equals(publicId)) {
             throw new ResourceNotFoundException("StepResult", stepResultId);
         }
@@ -176,11 +176,12 @@ public class ExecutionController {
         }
 
         try {
-            byte[] bytes = FileUtils.readFileToByteArray(file);
+            // Standart Java Files class'ı kullanarak okuyoruz
+            byte[] bytes = Files.readAllBytes(filePath);
             ByteArrayResource resource = new ByteArrayResource(bytes);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "inline; filename=\"" + file.getName() + "\"")
+                            "inline; filename=\"screenshot-" + stepResultId + ".png\"")
                     .contentType(MediaType.IMAGE_PNG)
                     .contentLength(bytes.length)
                     .body(resource);
@@ -189,6 +190,7 @@ public class ExecutionController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
 
     private Set<String> extractRoles(Authentication auth) {
         return auth.getAuthorities().stream()
