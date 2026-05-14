@@ -1,11 +1,13 @@
 package com.ahmedv2.zerostep.scenario.dto;
 
 import com.ahmedv2.zerostep.scenario.entity.BrowserConfig;
+import com.ahmedv2.zerostep.scenario.entity.ScenarioStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.hibernate.validator.constraints.URL;
 
 import java.util.Set;
+import java.util.UUID;
 
 public record ScenarioCreateRequest(
 
@@ -22,7 +24,10 @@ public record ScenarioCreateRequest(
 
         BrowserConfig browserConfig,
 
-        Set<@NotBlank @Size(max = 64) String> tags
+        Set<@NotBlank @Size(max = 64) String> tags,
 
+        UUID groupPublicId,
+
+        ScenarioStatus status
 
 ) {}

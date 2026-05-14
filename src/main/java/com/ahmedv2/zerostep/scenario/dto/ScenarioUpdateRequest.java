@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Size;
 import org.hibernate.validator.constraints.URL;
 
 import java.util.Set;
+import java.util.UUID;
 
 public record ScenarioUpdateRequest(
 
@@ -20,5 +21,7 @@ public record ScenarioUpdateRequest(
 
         BrowserConfig browserConfig,
 
-        Set<String> tags
+        Set<String> tags,
+
+        UUID groupPublicId
 ) {}

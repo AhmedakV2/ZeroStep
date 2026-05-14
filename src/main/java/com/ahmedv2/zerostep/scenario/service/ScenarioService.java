@@ -9,10 +9,16 @@ import com.ahmedv2.zerostep.scenario.dto.ScenarioResponse;
 import com.ahmedv2.zerostep.scenario.dto.ScenarioUpdateRequest;
 import com.ahmedv2.zerostep.scenario.entity.BrowserConfig;
 import com.ahmedv2.zerostep.scenario.entity.Scenario;
+import com.ahmedv2.zerostep.scenario.entity.ScenarioGroup;
 import com.ahmedv2.zerostep.scenario.entity.ScenarioStatus;
 import com.ahmedv2.zerostep.scenario.repository.ScenarioRepository;
 import com.ahmedv2.zerostep.user.entity.User;
 import com.ahmedv2.zerostep.user.repository.UserRepository;
+import com.ahmedv2.zerostep.step.entity.ActionType;
+import com.ahmedv2.zerostep.step.entity.TestStep;
+import com.ahmedv2.zerostep.step.entity.TestStepConfig;
+import com.ahmedv2.zerostep.step.repository.TestStepRepository;
+import com.ahmedv2.zerostep.step.util.FractionalIndexer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -34,19 +40,27 @@ public class ScenarioService {
     private final ScenarioRepository scenarioRepository;
     private final UserRepository userRepository;
     private final AuditService auditService;
+    private final ScenarioGroupService scenarioGroupService; // YENİ EKLENDİ
+    private final TestStepRepository stepRepository;
 
     // LISTELEME
-    // ADMIN/VIEWER tum senaryolari, TESTER sadece kendininkini gorur
     @Transactional(readOnly = true)
     public Page<ScenarioResponse> listScenarios(String username, Set<String> roles,
                                                 String search, ScenarioStatus status,
+                                                UUID groupPublicId, // YENİ EKLENDİ
                                                 Pageable pageable) {
         String normalizedSearch = (search == null) ? "" : search.trim();
         boolean canSeeAll = roles.contains("ROLE_ADMIN") || roles.contains("ROLE_VIEWER");
 
+        // UUID'den gerçek veritabanı ID'sini buluyoruz
+        Long groupId = null;
+        if (groupPublicId != null) {
+            groupId = scenarioGroupService.getGroupByPublicId(groupPublicId).getId();
+        }
+
         Page<Scenario> page = canSeeAll
-                ? scenarioRepository.searchAllActive(normalizedSearch, status, pageable)
-                : scenarioRepository.searchByOwnerActive(username, normalizedSearch, status, pageable);
+                ? scenarioRepository.searchAllActive(normalizedSearch, status, groupId, pageable)
+                : scenarioRepository.searchByOwnerActive(username, normalizedSearch, status, groupId, pageable);
 
         return page.map(this::toResponse);
     }
@@ -65,7 +79,6 @@ public class ScenarioService {
         User owner = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", username));
 
-        // Ayni kullanicinin aktif senaryolari arasinda ayni isim olmasin
         if (scenarioRepository.existsByNameAndOwnerIdAndDeletedAtIsNull(request.name(), owner.getId())) {
             throw new ConflictException("Ayni isimde bir senaryonuz zaten var");
         }
@@ -77,9 +90,28 @@ public class ScenarioService {
         scenario.setBaseUrl(request.baseUrl());
         scenario.setBrowserConfig(request.browserConfig() != null ? request.browserConfig() : new BrowserConfig());
         scenario.setTags(request.tags() != null ? request.tags().toArray(new String[0]) : new String[0]);
-        scenario.setStatus(ScenarioStatus.DRAFT);
+        scenario.setStatus(request.status() != null ? request.status() : ScenarioStatus.DRAFT);
+
+        // YENİ EKLENDİ: Gruba atama işlemi
+        if (request.groupPublicId() != null) {
+            ScenarioGroup group = scenarioGroupService.getGroupByPublicId(request.groupPublicId());
+            scenario.setGroup(group);
+        }
 
         Scenario saved = scenarioRepository.save(scenario);
+
+        if (saved.getBaseUrl() != null && !saved.getBaseUrl().isBlank()) {
+            TestStep navigate = new TestStep();
+            navigate.setScenario(saved);
+            navigate.setStepOrder(FractionalIndexer.INITIAL_ORDER);
+            navigate.setActionType(ActionType.NAVIGATE);
+            navigate.setInputValue(saved.getBaseUrl());
+            navigate.setDescription("Base URL");
+            navigate.setConfig(new TestStepConfig());
+            navigate.setEnabled(true);
+            stepRepository.save(navigate);
+        }
+
         log.info("Senaryo olusturuldu: {} (owner: {})", saved.getName(), username);
 
         auditService.record("SCENARIO_CREATED", "SCENARIO", saved.getId(),
@@ -88,21 +120,18 @@ public class ScenarioService {
         return toResponse(saved);
     }
 
-    //  GUNCELLE
+    // GUNCELLE
     @Transactional
     public ScenarioResponse updateScenario(UUID publicId, ScenarioUpdateRequest request,
                                            String username, Set<String> roles) {
         Scenario s = findOrThrow(publicId);
         checkWriteAccess(s, username, roles);
 
-        // Archive edilmis senaryo duzenlenemez
         if (s.getStatus() == ScenarioStatus.ARCHIVED) {
             throw new ForbiddenException("Arsivlenmis senaryo duzenlenemez");
         }
 
-        // Partial update; sadece null olmayan alanlari guncelle
         if (request.name() != null && !request.name().equals(s.getName())) {
-            // Yeni isim baska senaryoda kullanimda mi?
             if (scenarioRepository.existsByNameAndOwnerIdAndDeletedAtIsNull(
                     request.name(), s.getOwner().getId())) {
                 throw new ConflictException("Ayni isimde bir senaryonuz zaten var");
@@ -122,6 +151,12 @@ public class ScenarioService {
             s.setTags(request.tags().toArray(new String[0]));
         }
 
+        // YENİ EKLENDİ: Grup Güncelleme
+        if (request.groupPublicId() != null) {
+            ScenarioGroup group = scenarioGroupService.getGroupByPublicId(request.groupPublicId());
+            s.setGroup(group);
+        }
+
         Scenario saved = scenarioRepository.save(s);
 
         auditService.record("SCENARIO_UPDATED", "SCENARIO", saved.getId(),
@@ -138,7 +173,6 @@ public class ScenarioService {
         checkWriteAccess(s, username, roles);
 
         ScenarioStatus old = s.getStatus();
-        // State machine domain icinde
         try {
             switch (target) {
                 case READY     -> s.markReady();
@@ -178,14 +212,12 @@ public class ScenarioService {
         log.info("Senaryo silindi (soft): {} (owner: {})", s.getName(), s.getOwner().getUsername());
     }
 
-
     // Yardimci metodlar
     private Scenario findOrThrow(UUID publicId) {
         return scenarioRepository.findByPublicIdActive(publicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Scenario", publicId));
     }
 
-    // Okuma: ADMIN/VIEWER herkesi gorur, TESTER sadece kendi senaryosunu
     private void checkReadAccess(Scenario s, String username, Set<String> roles) {
         if (roles.contains("ROLE_ADMIN") || roles.contains("ROLE_VIEWER")) return;
         if (!s.getOwner().getUsername().equals(username)) {
@@ -193,7 +225,6 @@ public class ScenarioService {
         }
     }
 
-    // Yazma: ADMIN tumunu, TESTER sadece kendini; VIEWER hicbir zaman
     private void checkWriteAccess(Scenario s, String username, Set<String> roles) {
         if (roles.contains("ROLE_VIEWER") && !roles.contains("ROLE_ADMIN")) {
             throw new ForbiddenException("VIEWER rolu ile yazma islemi yapilamaz");
@@ -209,6 +240,13 @@ public class ScenarioService {
         if (s.getTags() != null) {
             for (String t : s.getTags()) tagSet.add(t);
         }
+
+        // YENI EKLENDI: Grup bilgilerini Mapleme
+        UUID groupPublicId = s.getGroup() != null ? s.getGroup().getPublicId() : null;
+        String groupName = s.getGroup() != null ? s.getGroup().getName() : null;
+
+        // DİKKAT: ScenarioResponse Record veya Class'ınızın constructor'ına
+        // groupPublicId ve groupName parametrelerini en son sıraya eklemeyi unutmayın.
         return new ScenarioResponse(
                 s.getPublicId(),
                 s.getName(),
@@ -222,7 +260,9 @@ public class ScenarioService {
                         s.getOwner().getUsername(),
                         s.getOwner().getDisplayName()),
                 s.getCreatedAt(),
-                s.getUpdatedAt()
+                s.getUpdatedAt(),
+                groupPublicId, // EKLENDİ
+                groupName      // EKLENDİ
         );
     }
 }

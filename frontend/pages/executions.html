@@ -69,13 +69,22 @@
                             <label style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); margin-bottom: 0.3rem; display: block;">Bitiş</label>
                             <input type="datetime-local" id="filter-to" class="form-input" style="width: 100%;">
                         </div>
+                        <div style="flex: 1; min-width: 160px;">
+                            <label style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--clr-text-muted); margin-bottom: 0.3rem; display: block;">Modül</label>
+                            <select id="filter-group" class="form-input" style="width: 100%;">
+                                <option value="">Tümü</option>
+                            </select>
+                        </div>
                         <button id="btn-filter" class="btn btn-primary btn-sm" style="align-self: flex-end;">Filtrele</button>
                     </div>
                 </div>
             </div>
 
             <!-- Tablo kartı -->
-            <div class="card stagger-item delay-2" style="padding: 0; overflow: hidden; margin-top: 1.5rem;">
+            <div class="card mt-3 glass-card stagger-item delay-2">
+                <div class="card-header">
+                    <h3 class="card-title">Çalıştırmalar</h3>
+                </div>
                 <div class="table-wrapper">
                     <table class="data-table">
                         <thead>

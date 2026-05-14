@@ -10,6 +10,7 @@ let actionMetadata    = [];
 let steps             = [];
 let selectedStepId    = null;
 let viewMode          = 'diagram';
+let allAvailableGroups = []; // YENİ: Ayarlar modalı için grupları tutar
 
 // Diyagram transform
 let panX = 0, panY = 0, zoom = 1;
@@ -71,10 +72,8 @@ function saveDiagramState() {
     scenarioPublicId = params.get('id');
     if (!scenarioPublicId) { Toast.error('Senaryo ID bulunamadı'); return; }
 
-    // Kayıtlı diyagram konumlarını ve kopuk düğümleri yükle
     loadDiagramState();
 
-    // Tam ekran durumu sessionStorage'da kayıtlıysa otomatik aç
     if (sessionStorage.getItem('scenario_fullscreen') === 'true') {
         toggleFullscreen(true);
     }
@@ -89,20 +88,48 @@ function saveDiagramState() {
     bindContextMenuOnce();
     bindKeyboardShortcuts();
 
+    // Modülleri ve Verileri Yükle
+    await fetchAllGroupsForDropdown();
     await Promise.all([loadActionMetadata(), loadScenario()]);
     await loadSteps();
+
+    // Ayarlar Butonu Eventi
+    document.getElementById('btn-edit-scenario')?.addEventListener('click', openScenarioSettingsModal);
 })();
 
 // ═══════════════════════════════════════════════════════════
 // VERİ YÜKLEMELERİ
 // ═══════════════════════════════════════════════════════════
 
+async function fetchAllGroupsForDropdown() {
+    try {
+        const response = await Api.get('/scenario-groups', { size: 100 });
+        allAvailableGroups = (response && response.data && response.data.content) ? response.data.content : [];
+    } catch (e) { console.warn("Gruplar alınamadı"); }
+}
+
 async function loadScenario() {
     try {
         const raw = await Api.get(`/scenarios/${scenarioPublicId}`);
         scenarioData = raw?.publicId ? raw : (raw?.data ?? raw);
 
-        document.getElementById('breadcrumb-name').textContent = scenarioData.name;
+        // BREADCRUMB GÜNCELLEMESİ (Grup Destekli)
+        const breadcrumbContainer = document.getElementById('breadcrumb-container');
+        const groupName = scenarioData.groupName || 'Bağımsız Senaryolar';
+
+        // Kullanıcı gruba tıkladığında scenarios.html'e gidip o grubun açılması için sessionStorage'a sinyal bırakıyoruz
+        const groupLink = scenarioData.groupPublicId ?
+            `<a href="scenarios.html" onclick="sessionStorage.setItem('autoOpenGroup', '${scenarioData.groupPublicId}'); sessionStorage.setItem('autoOpenGroupName', '${scenarioData.groupName}');" title="${Utils.escHtml(groupName)}">📁 ${Utils.escHtml(groupName)}</a>` :
+            `<span style="color:var(--clr-text-muted)">Bağımsız Senaryo</span>`;
+
+        breadcrumbContainer.innerHTML = `
+            <a href="scenarios.html">Modüller</a>
+            <span class="breadcrumb-sep">/</span>
+            ${groupLink}
+            <span class="breadcrumb-sep">/</span>
+            <span class="breadcrumb-current" title="${Utils.escHtml(scenarioData.name)}">${Utils.escHtml(scenarioData.name)}</span>
+        `;
+
         document.title = `ZeroStep — ${scenarioData.name}`;
 
         const runBtn = document.getElementById('btn-run');
@@ -134,6 +161,143 @@ async function loadSteps() {
         steps.sort((a, b) => a.stepOrder - b.stepOrder);
         renderAll();
     } catch (err) { Toast.error('Adımlar yüklenemedi: ' + err.message); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SENARYO AYARLARI MODALI (YENİ)
+// ═══════════════════════════════════════════════════════════
+
+function openScenarioSettingsModal() {
+    if (!scenarioData) return;
+
+    const tagsValue = scenarioData.tags?.join(',') || '';
+    const curStatus = scenarioData.status || 'DRAFT';
+
+    let groupOptions = `<option value="">-- Modül Seçilmedi (Bağımsız) --</option>`;
+    allAvailableGroups.forEach(g => {
+        const selected = g.publicId === scenarioData.groupPublicId ? 'selected' : '';
+        groupOptions += `<option value="${g.publicId}" ${selected}>${Utils.escHtml(g.name)}</option>`;
+    });
+
+    const content = `
+        <form id="scenario-settings-form" class="mt-3">
+            <div class="form-group mb-4">
+                <label class="form-label">Senaryo Adı *</label>
+                <input type="text" name="name" class="form-input" value="${Utils.escHtml(scenarioData.name || '')}" required minlength="3">
+            </div>
+
+            <div class="form-group mb-4">
+                <label class="form-label">Ait Olduğu Modül</label>
+                <select name="groupPublicId" class="form-input">
+                    ${groupOptions}
+                </select>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                <div class="form-group">
+                    <label class="form-label">Durum</label>
+                    <select name="status" class="form-input">
+                        <option value="DRAFT" ${curStatus === 'DRAFT' ? 'selected' : ''}>Taslak</option>
+                        <option value="READY" ${curStatus === 'READY' ? 'selected' : ''}>Hazır</option>
+                        <option value="ARCHIVED" ${curStatus === 'ARCHIVED' ? 'selected' : ''}>Arşivli</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Base URL</label>
+                    <input type="url" name="baseUrl" class="form-input" value="${Utils.escHtml(scenarioData.baseUrl || '')}" placeholder="https://example.com">
+                </div>
+            </div>
+
+            <div class="form-group mb-4">
+                <label class="form-label">Açıklama</label>
+                <textarea name="description" class="form-input" rows="2">${Utils.escHtml(scenarioData.description || '')}</textarea>
+            </div>
+            
+            <div class="form-group mb-4">
+                <label class="form-label">Etiketler</label>
+                <div id="settings-tag-input" class="tag-input-container" data-tags="${Utils.escHtml(tagsValue)}"></div>
+            </div>
+
+            <div class="divider"></div><h4 class="mb-3 mt-3">Browser Ayarları</h4>
+            <div class="form-group mb-3">
+                <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="headless" ${scenarioData.browserConfig?.headless ? 'checked' : ''}> <span>Headless Mode</span>
+                </label>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                <div class="form-group">
+                    <label class="form-label">Viewport Genişliği</label>
+                    <input type="number" name="viewportWidth" class="form-input" value="${scenarioData.browserConfig?.viewportWidth || 1920}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Viewport Yüksekliği</label>
+                    <input type="number" name="viewportHeight" class="form-input" value="${scenarioData.browserConfig?.viewportHeight || 1080}">
+                </div>
+            </div>
+        </form>
+    `;
+
+    Modal.open({
+        title: 'Senaryo Ayarları',
+        contentHTML: content,
+        confirmLabel: 'Kaydet',
+        size: 'md',
+        onConfirm: async () => await saveScenarioSettings()
+    });
+
+    setupSettingsTagInput();
+}
+
+function setupSettingsTagInput() {
+    const container = Modal.getElement('#settings-tag-input');
+    if (!container) return;
+    const tagsStr = container.getAttribute('data-tags') || '';
+    window._currentTags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
+
+    function render() {
+        container.innerHTML = window._currentTags.map(tag => `
+            <div class="tag">${Utils.escHtml(tag)} <button type="button" onclick="window.removeTag('${Utils.escHtml(tag)}')">✕</button></div>
+        `).join('') + `<input type="text" placeholder="Etiket ekle + Enter" onkeydown="window.handleTagKeydown(event)">`;
+    }
+    render();
+    window.removeTag = (tag) => { window._currentTags = window._currentTags.filter(t => t !== tag); render(); };
+    window.handleTagKeydown = (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); const t = e.target.value.trim(); if (t && !window._currentTags.includes(t)) { window._currentTags.push(t); render(); } }
+    };
+}
+
+async function saveScenarioSettings() {
+    const form = Modal.getElement('#scenario-settings-form');
+    if (!form.checkValidity()) { form.reportValidity(); return false; }
+    const formData = new FormData(form);
+
+    const groupPublicId = formData.get('groupPublicId');
+    const payload = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        baseUrl: formData.get('baseUrl') || null,
+        status: formData.get('status'),
+        groupPublicId: groupPublicId && groupPublicId.trim() !== "" ? groupPublicId : null,
+        tags: window._currentTags || [],
+        browserConfig: {
+            headless: form.querySelector('input[name="headless"]')?.checked || false,
+            viewportWidth: parseInt(formData.get('viewportWidth')) || 1920,
+            viewportHeight: parseInt(formData.get('viewportHeight')) || 1080
+        }
+    };
+
+    try {
+        await Api.patch(`/scenarios/${scenarioPublicId}`, payload);
+        await Api.patch(`/scenarios/${scenarioPublicId}/status`, { status: payload.status });
+
+        Toast.success("Ayarlar güncellendi");
+        Modal.close();
+
+        await loadScenario(); // Arayüzü güncelle
+    } catch (err) {
+        Toast.error(err.message || "İşlem başarısız");
+        return false;
+    }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -361,10 +525,8 @@ function setupCanvasInteraction() {
             return;
         }
 
-        // Tıklanan yer bir adımsa, pan başlatma
         if (e.target.closest('.step-node')) return;
 
-        // Sol tık, orta tık veya Space ile kaydırmayı başlat
         if (e.button === 0 || e.button === 1 || (e.button === 0 && e.getModifierState('Space'))) {
             isPanning = true;
             panStartX = e.clientX - panX;
@@ -377,7 +539,6 @@ function setupCanvasInteraction() {
     window.addEventListener('mousemove', e => {
         if (isPanning) { panX=e.clientX-panStartX; panY=e.clientY-panStartY; applyTransform(); }
 
-        // Kutu sürükleme
         if (dragNodeId) {
             const sr = document.querySelector('.diagram-surface').getBoundingClientRect();
             const nx=(e.clientX-sr.left-dragOffsetX-panX)/zoom;
@@ -388,7 +549,6 @@ function setupCanvasInteraction() {
             renderConnections();
         }
 
-        // Porttan porta geçici çizgi çizme
         if (isConnecting && connectSourceId) {
             const sr = document.querySelector('.diagram-surface').getBoundingClientRect();
             const mouseX = (e.clientX - sr.left - panX) / zoom;
@@ -396,7 +556,7 @@ function setupCanvasInteraction() {
 
             const sp = nodePositions[connectSourceId];
             if (sp) {
-                const x1 = sp.x + 220; // Out Port
+                const x1 = sp.x + 220;
                 const y1 = sp.y + 38;
                 const cp = Math.abs(mouseX - x1) / 2;
 
@@ -414,7 +574,6 @@ function setupCanvasInteraction() {
                 tempPath.setAttribute('d', `M${x1},${y1} C${x1+cp},${y1} ${mouseX-cp},${mouseY} ${mouseX},${mouseY}`);
             }
 
-            // Port In üzerine gelindiğinde hover efekti
             document.querySelectorAll('.port-in').forEach(p => p.classList.remove('highlight'));
             const portIn = document.elementFromPoint(e.clientX, e.clientY)?.closest('.port-in');
             if (portIn) portIn.classList.add('highlight');
@@ -425,10 +584,9 @@ function setupCanvasInteraction() {
         if (isPanning) { isPanning=false; surface.style.cursor=''; }
         if (dragNodeId) {
             dragNodeId = null;
-            saveDiagramState(); // Sürükleme bittikten sonra konumu localStorage'a kaydet
+            saveDiagramState();
         }
 
-        // Bağlantıyı serbest bırakma ve API'yi çağırma
         if (isConnecting) {
             const tempPath = document.getElementById('temp-connection');
             if (tempPath) tempPath.remove();
@@ -440,9 +598,7 @@ function setupCanvasInteraction() {
                 const targetNode = portIn.closest('.step-node');
                 const targetId = targetNode.dataset.id;
 
-                // Kendine bağlamasını engelle
                 if (targetId && targetId !== connectSourceId) {
-                    // Bağlantı manuel kurulduğuna göre kopuklukları kaldır
                     visuallyDisconnected.delete(targetId);
                     visuallyDisconnected.delete(connectSourceId);
                     saveDiagramState();
@@ -468,12 +624,8 @@ function applyTransform() {
         `translate(${panX}px,${panY}px) scale(${zoom})`;
 }
 
-// ── Diyagram üzerinden sıralamayı güncelleyen API çağrısı ──
 async function reorderFromDiagram(sourceId, targetId) {
-    const payload = {
-        afterStepPublicId: sourceId
-    };
-
+    const payload = { afterStepPublicId: sourceId };
     try {
         const raw = await Api.patch(`/steps/${targetId}/reorder`, payload);
         const updated = raw?.publicId ? raw : (raw?.data ?? raw);
@@ -488,7 +640,7 @@ async function reorderFromDiagram(sourceId, targetId) {
         Toast.success('Bağlantı güncellendi');
     } catch (err) {
         Toast.error('Bağlantı değiştirilemedi: ' + err.message);
-        await loadSteps(); // Hata olursa listeyi sunucudan yenile
+        await loadSteps();
     }
 }
 
@@ -665,7 +817,6 @@ async function doCreateStep(body, dropX, dropY) {
         const newStep = await Api.post(`/scenarios/${scenarioPublicId}/steps`, body);
         const step = newStep?.publicId ? newStep : (newStep?.data ?? newStep);
 
-        // Yeni adım eklendiğinde kopuk başlar, otomatik çizgi gitmez
         nodePositions[step.publicId] = { x: dropX, y: dropY };
         visuallyDisconnected.add(step.publicId);
         saveDiagramState();
@@ -880,7 +1031,6 @@ async function reorderFromTable() {
         const idx = steps.findIndex(s => s.publicId === movedId);
         if (idx !== -1) steps[idx].stepOrder = updated.stepOrder;
 
-        // Tabloda manuel sıra değişirse kopukluğu kaldır
         visuallyDisconnected.delete(movedId);
         saveDiagramState();
 
@@ -1017,7 +1167,6 @@ function renderPropsPanel(step) {
     });
 }
 
-// ── Auto-Save ──────────────────────────────────────────────
 function scheduleAutoSave(id) {
     setAutosaveState('saving');
     clearTimeout(autoSaveTimer);
@@ -1108,7 +1257,6 @@ window.duplicateStep = async function(publicId) {
         const orig = nodePositions[publicId];
         nodePositions[ns.publicId] = orig ? {x:orig.x+30,y:orig.y+30} : {x:60+steps.length*280,y:80};
 
-        // Kopyalananları da kopuk işaretle
         visuallyDisconnected.add(ns.publicId);
         saveDiagramState();
 
@@ -1129,7 +1277,6 @@ window.deleteStep = function(publicId) {
             await Api.del(`/steps/${publicId}`);
             steps = steps.filter(s => s.publicId !== publicId);
 
-            // Silinenleri hafızadan temizle
             delete nodePositions[publicId];
             visuallyDisconnected.delete(publicId);
             saveDiagramState();
@@ -1253,7 +1400,6 @@ function updateShellGrid() {
     shell.style.gridTemplateColumns = `${left} 1fr ${right}`;
 }
 
-// forceState parametresi ile tam ekran durumu sessionStorage ile senkronize ediliyor
 function toggleFullscreen(forceState) {
     if (forceState !== undefined) {
         fullscreenActive = forceState;
@@ -1261,7 +1407,6 @@ function toggleFullscreen(forceState) {
         fullscreenActive = !fullscreenActive;
     }
 
-    // Durumu tarayıcı önbelleğine yaz
     sessionStorage.setItem('scenario_fullscreen', fullscreenActive);
 
     const main = document.querySelector('main.main-content');

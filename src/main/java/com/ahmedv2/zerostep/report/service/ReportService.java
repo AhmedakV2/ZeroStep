@@ -66,12 +66,19 @@ public class ReportService {
         }
 
         String username = filter.username() != null ? filter.username() : "";
+        UUID groupPublicId = null;
+        if (filter.groupPublicId() != null && !filter.groupPublicId().isBlank()) {
+            try {
+                groupPublicId = UUID.fromString(filter.groupPublicId().trim());
+            } catch (IllegalArgumentException ignored) {}
+        }
 
         return executionRepo.findAllFiltered(
                 scenarioName,
                 executionStatus,
                 statusIsNull,
                 username,
+                groupPublicId,
                 pageable
         ).map(this::toListItem);
     }

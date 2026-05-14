@@ -17,7 +17,9 @@ public record ScenarioResponse(
         Set<String> tags,
         OwnerSummary owner,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        UUID groupPublicId,
+        String groupName
 ) {
     public record  OwnerSummary(UUID publicId,String username,String displayName) {}
 }

@@ -10,5 +10,6 @@ public record ReportFilterDto(
         String status,
         String username,
         String fromDate,
-        String toDate
+        String toDate,
+        String groupPublicId
 ) {}

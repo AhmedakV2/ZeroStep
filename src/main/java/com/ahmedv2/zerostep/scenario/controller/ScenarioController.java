@@ -36,21 +36,22 @@ public class ScenarioController {
 
     private final ScenarioService scenarioService;
 
-    @Operation(summary = "Senaryo listele (paqination + searc + status filter)")
+    @Operation(summary = "Senaryo listele (pagination + search + status + YENI: group filter)")
     @GetMapping
     public ApiResponse<Page<ScenarioResponse>> listScenario(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) ScenarioStatus status,
-            @PageableDefault(size = 20,sort = "id") Pageable pegeable,
-    Authentication auth) {
+            @RequestParam(required = false) UUID groupPublicId, // YENİ EKLENDİ
+            @PageableDefault(size = 20, sort = "id") Pageable pageable,
+            Authentication auth) {
         return ApiResponse.ok(scenarioService.listScenarios(
-                auth.getName(), extractRoles(auth), search, status ,pegeable));
+                auth.getName(), extractRoles(auth), search, status, groupPublicId, pageable));
     }
 
     @Operation(summary = "Tek senaryo detayi")
     @GetMapping("/{publicId}")
-    public ApiResponse<ScenarioResponse> getScenario(@PathVariable UUID publicId,Authentication auth){
-        return ApiResponse.ok(scenarioService.getScenario(publicId,auth.getName(), extractRoles(auth)));
+    public ApiResponse<ScenarioResponse> getScenario(@PathVariable UUID publicId, Authentication auth){
+        return ApiResponse.ok(scenarioService.getScenario(publicId, auth.getName(), extractRoles(auth)));
     }
 
     @Operation(summary = "Yeni senaryo olustur (TESTER veya ADMIN)")
@@ -61,7 +62,6 @@ public class ScenarioController {
             Authentication auth){
         ScenarioResponse response = scenarioService.createScenario(request, auth.getName());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response));
-
     }
 
     @Operation(summary = "Senaryo guncelle (owner veya ADMIN)")
@@ -72,9 +72,8 @@ public class ScenarioController {
             @Valid @RequestBody ScenarioUpdateRequest request,
             Authentication auth){
         return ApiResponse.ok(scenarioService.updateScenario(
-                publicId,request,auth.getName(),extractRoles(auth)));
+                publicId, request, auth.getName(), extractRoles(auth)));
     }
-
 
     @Operation(summary = "Senaryo durum degistir (DRAFT/READY/ARCHIVED)")
     @PreAuthorize("hasAnyRole('TESTER','ADMIN')")
@@ -84,7 +83,7 @@ public class ScenarioController {
             @Valid @RequestBody ScenarioStatusRequest request,
             Authentication auth){
         return ApiResponse.ok(scenarioService.changeStatus(
-                publicId,request.status(),auth.getName(),extractRoles(auth)));
+                publicId, request.status(), auth.getName(), extractRoles(auth)));
     }
 
     @Operation(summary = "Senaryo sil (owner veya ADMIN; soft delete)")
@@ -100,5 +99,4 @@ public class ScenarioController {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toSet());
     }
-
 }

@@ -207,13 +207,13 @@
 .data-table td {
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--clr-border);
-    color: var(--clr-text);
     vertical-align: middle;
-    transition: background var(--transition);
 }
-.data-table tbody tr { transition: background 0.2s; }
-.data-table tbody tr:hover { background: var(--clr-surface-2); }
+.data-table tbody tr:hover {
+    background: var(--clr-surface-2);
+}
 .data-table tbody tr:last-child td { border-bottom: none; }
+
 
 /* ── Modal ────────────────────────────────────────────── */
 .modal-backdrop {

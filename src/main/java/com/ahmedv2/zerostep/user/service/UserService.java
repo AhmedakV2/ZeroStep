@@ -91,6 +91,12 @@ public class UserService {
         log.info("Sifre basariyla degistirildi: {}", username);
     }
 
+    @Transactional(readOnly = true)
+    public User findByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User", username));
+    }
+
     private UserResponse toResponse(User user) {
         return new UserResponse(
                 user.getPublicId(),

@@ -1,6 +1,7 @@
 // Çalıştırmalar Listesi
 let currentPage = 0;
 const pageSize  = 20;
+let groupOptionsLoaded = false;
 
 async function init() {
     if (!Auth.isLoggedIn()) { window.location.href = '../index.html'; return; }
@@ -13,6 +14,7 @@ async function init() {
     }
 
     setupEventListeners();
+    await loadGroupsForFilter();
     await loadExecutions();
 }
 
@@ -28,6 +30,7 @@ function setupEventListeners() {
     const btnFilter    = document.getElementById('btn-filter');
     const fromFilter   = document.getElementById('filter-from');
     const toFilter     = document.getElementById('filter-to');
+    const groupFilter  = document.getElementById('filter-group');
 
     if (searchInput) {
         const debouncedSearch = typeof Utils.debounce === 'function'
@@ -38,10 +41,32 @@ function setupEventListeners() {
 
     statusFilter?.addEventListener('change', () => { currentPage = 0; loadExecutions(); });
     btnFilter?.addEventListener('click', () => { currentPage = 0; loadExecutions(); });
+    groupFilter?.addEventListener('change', () => { currentPage = 0; loadExecutions(); });
 
     [fromFilter, toFilter].forEach(el => {
         el?.addEventListener('change', () => { currentPage = 0; loadExecutions(); });
     });
+}
+
+async function loadGroupsForFilter() {
+    if (groupOptionsLoaded) return;
+    const groupFilter = document.getElementById('filter-group');
+    if (!groupFilter) return;
+
+    try {
+        const raw = await Api.get('/scenario-groups', { page: 0, size: 200, sort: 'createdAt,desc' });
+        const data = raw?.data || raw || {};
+        const groups = data.content || [];
+
+        const options = ['<option value="">Tümü</option>'].concat(
+            groups.map(g => `<option value="${Utils.escHtml(g.publicId)}">${Utils.escHtml(g.name)}</option>`)
+        );
+
+        groupFilter.innerHTML = options.join('');
+        groupOptionsLoaded = true;
+    } catch (err) {
+        console.warn('Modül listesi yüklenemedi:', err);
+    }
 }
 
 // ─── Veri Yükleme ─────────────────────────────────────────────
@@ -111,12 +136,16 @@ function buildCleanParams() {
     const statusEl   = document.getElementById('filter-status');
     const fromEl     = document.getElementById('filter-from');
     const toEl       = document.getElementById('filter-to');
+    const groupEl    = document.getElementById('filter-group');
 
     if (scenarioEl?.value?.trim()) {
         params.scenarioName = scenarioEl.value.trim();
     }
     if (statusEl?.value && statusEl.value !== '' && statusEl.value !== 'Tümü') {
         params.status = statusEl.value;
+    }
+    if (groupEl?.value) {
+        params.groupPublicId = groupEl.value;
     }
     if (fromEl?.value) {
         const dt = new Date(fromEl.value);

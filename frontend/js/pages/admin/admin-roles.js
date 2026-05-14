@@ -7,7 +7,7 @@ const AdminRolesPage = (() => {
         // 1. Güvenlik ve Yetki Kontrolü
         if (typeof Auth !== 'undefined') {
             if (!Auth.isLoggedIn()) {
-                window.location.href = '../../index.html';
+                window.location.href = '../../../index.html';
                 return;
             }
 

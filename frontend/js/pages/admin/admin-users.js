@@ -5,7 +5,7 @@ const AdminUsersPage = (() => {
     async function init() {
         // Auth kontrolü
         if (!Auth.isLoggedIn()) {
-            window.location.href = '../../index.html';
+            window.location.href = '../../../index.html';
             return;
         }
 

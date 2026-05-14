@@ -54,7 +54,8 @@
             padding: 0 .875rem; flex-shrink: 0; overflow: hidden;
         }
         .breadcrumb { display:flex;align-items:center;gap:.35rem;font-size:.82rem;color:var(--clr-text-muted); }
-        .breadcrumb a { color:var(--clr-text-muted); } .breadcrumb a:hover { color:var(--clr-primary); }
+        .breadcrumb a { color:var(--clr-text-muted); text-decoration: none; }
+        .breadcrumb a:hover { color:var(--clr-primary); text-decoration: underline; }
         .breadcrumb-sep { opacity:.35; }
         .breadcrumb-current { color:var(--clr-text);font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
         .view-toggle {
@@ -256,10 +257,16 @@
             padding:.08rem .32rem;font-family:var(--font-ui);font-size:.68rem;color:var(--clr-primary-h);
         }
 
+        /* YENİ: Settings Modal Etiket Stilleri */
+        .tag-input-container { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.6rem; background: var(--clr-surface-2); border: 1px solid var(--clr-border); border-radius: var(--radius-sm); min-height: 2.5rem; }
+        .tag { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--clr-primary); color: #fff; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
+        .tag button { background: none; border: none; color: #fff; cursor: pointer; font-size: 1rem; padding: 0; line-height: 1; }
+        .tag-input-container input { flex: 1; min-width: 100px; background: none; border: none; outline: none; color: var(--clr-text); font-family: var(--font-body); }
+
+
         @keyframes fadeIn  { from{opacity:0} }
         @keyframes slideUp { from{opacity:0;transform:translateY(8px)} }
 
-        /* Tüm Popup ve Modalları Tam Ekran Modunda Bile En Üstte Tut */
         #toast-container,
         .modal-overlay,
         .modal-container,
@@ -282,10 +289,10 @@
     <main class="main-content" style="padding:0;overflow:hidden;">
 
         <div class="scenario-topbar">
-            <nav class="breadcrumb">
-                <a href="scenarios.html">Senaryolar</a>
+            <nav class="breadcrumb" id="breadcrumb-container">
+                <a href="scenarios.html">Modüller</a>
                 <span class="breadcrumb-sep">/</span>
-                <span class="breadcrumb-current" id="breadcrumb-name">Yükleniyor...</span>
+                <span class="breadcrumb-current">Yükleniyor...</span>
             </nav>
 
             <div class="view-toggle">
@@ -300,28 +307,25 @@
 
             <div class="canvas-actions">
                 <button class="shortcut-help-btn" id="btn-shortcuts">⌨ Kısayollar</button>
+                <button class="btn btn-ghost btn-sm" id="btn-edit-scenario">⚙ Ayarlar</button>
                 <button class="btn btn-ghost btn-sm" id="btn-save">Kaydet</button>
                 <button class="btn btn-primary btn-sm" id="btn-run" disabled>&#9654; Çalıştır</button>
             </div>
         </div>
 
         <div class="step-editor-shell">
-
             <div class="tool-palette">
                 <div class="tool-palette-header">
-                    <input type="text" class="tool-palette-search" id="action-search"
-                           placeholder="Adım ara... (T aç/kapat)">
+                    <input type="text" class="tool-palette-search" id="action-search" placeholder="Adım ara... (T aç/kapat)">
                 </div>
                 <div class="tool-palette-body" id="action-palette">
                     <div style="display:flex;align-items:center;justify-content:center;padding:2rem;">
-                        <span class="spinner" style="width:1rem;height:1rem;
-                            border-color:var(--clr-border);border-top-color:var(--clr-primary);"></span>
+                        <span class="spinner" style="width:1rem;height:1rem; border-color:var(--clr-border);border-top-color:var(--clr-primary);"></span>
                     </div>
                 </div>
             </div>
 
             <div class="step-canvas-wrap">
-
                 <div id="diagram-canvas">
                     <div class="diagram-surface">
                         <div class="diagram-viewport" id="diagram-viewport">
@@ -331,15 +335,10 @@
                     <div class="drop-overlay" id="drop-overlay"></div>
                     <div class="canvas-empty" id="canvas-empty">
                         <span class="canvas-empty-icon">◈</span>
-                        <span class="canvas-empty-text">
-                            Sol panelden buraya adım sürükleyin
-                        </span>
+                        <span class="canvas-empty-text">Sol panelden buraya adım sürükleyin</span>
                     </div>
                 </div>
-
-                <div id="table-canvas">
-                </div>
-
+                <div id="table-canvas"></div>
             </div>
 
             <div class="step-props">
@@ -357,7 +356,6 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </main>
 </div>

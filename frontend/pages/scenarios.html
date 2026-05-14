@@ -3,65 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZeroStep — Senaryolar</title>
+    <title>ZeroStep — Senaryolar & Modüller</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/main.css">
-    <script src="../assets/js/theme-init.js"></script>    <script src="../assets/js/csp-helper.js"></script>
+    <script src="../assets/js/theme-init.js"></script>
+    <script src="../assets/js/csp-helper.js"></script>
     <link rel="stylesheet" href="../assets/css/components.css">
     <link rel="stylesheet" href="../assets/css/layout.css">
     <style>
-        /* Sayfa giriş animasyonları */
-        .stagger-item {
-            opacity: 0;
-            transform: translateY(18px);
-            animation: pageItemFadeUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        .delay-1 { animation-delay: 0.08s; }
-        .delay-2 { animation-delay: 0.16s; }
-        .delay-3 { animation-delay: 0.24s; }
-        .delay-4 { animation-delay: 0.32s; }
-        .delay-5 { animation-delay: 0.40s; }
+        /* Animasyonlar */
+        .stagger-item { opacity: 0; transform: translateY(18px); animation: pageItemFadeUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .delay-1 { animation-delay: 0.08s; } .delay-2 { animation-delay: 0.16s; } .delay-3 { animation-delay: 0.24s; }
         @keyframes pageItemFadeUp { to { opacity: 1; transform: translateY(0); } }
 
-        /* Yumuşak arka plan */
-        .page-bg {
-            position: fixed; inset: 0; z-index: 0; pointer-events: none;
-            background:
-                    radial-gradient(ellipse 70% 50% at 15% 30%, rgba(158, 134, 232, 0.05) 0%, transparent 60%),
-                    radial-gradient(ellipse 50% 40% at 85% 70%, rgba(158, 134, 232, 0.03) 0%, transparent 55%);
-        }
+        /* Arka plan */
+        .page-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(ellipse 70% 50% at 15% 30%, rgba(158, 134, 232, 0.05) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 85% 70%, rgba(158, 134, 232, 0.03) 0%, transparent 55%); }
         .page-content { position: relative; z-index: 1; }
 
-        /* Dropdown & Tag Input Stilleri */
-        .dropdown-menu {
-            position: absolute; top: 100%; right: 0; display: none;
-            flex-direction: column; background: var(--clr-surface);
-            border: 1px solid var(--clr-border); border-radius: var(--radius-sm);
-            box-shadow: var(--shadow-md); min-width: 160px; z-index: 100; margin-top: 0.25rem;
-        }
-        .dropdown-menu a, .dropdown-menu button {
-            display: block; width: 100%; padding: 0.6rem 1rem; text-align: left;
-            background: none; border: none; color: var(--clr-text); cursor: pointer;
-            font-size: 0.9rem; transition: background var(--transition);
-        }
+        /* --- YENİ: MODÜL KARTLARI STİLLERİ --- */
+        .group-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+        .group-card { background: var(--clr-surface); border: 1px solid var(--clr-border); border-radius: var(--radius-md); padding: 1.5rem; cursor: pointer; transition: all 0.2s ease; position: relative; display: flex; flex-direction: column; justify-content: space-between;}
+        .group-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--clr-primary); }
+        .group-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;}
+        .group-card-title { font-size: 1.2rem; font-weight: 600; color: var(--clr-text); }
+        .group-card-desc { font-size: 0.9rem; color: var(--clr-text-muted); margin-bottom: 1rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .group-stats { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--clr-surface-2); }
+        .stat-badge { font-size: 0.75rem; font-weight: 600; padding: 0.3rem 0.6rem; border-radius: 6px; background: var(--clr-surface-2); color: var(--clr-text); display: flex; align-items: center; gap: 0.3rem;}
+
+        .stat-ready { color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .stat-draft { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+        .delete-group-btn { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--clr-text-muted); cursor: pointer; font-size: 1.2rem; opacity: 0; transition: opacity 0.2s, color 0.2s;}
+        .group-card:hover .delete-group-btn { opacity: 1; }
+        .delete-group-btn:hover { color: var(--clr-danger); }
+        .play-group-btn { position: absolute; top: 1rem; right: 3rem; background: var(--clr-surface-2); border: 1px solid var(--clr-border); color: var(--clr-primary); cursor: pointer; font-size: 0.8rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 6px; opacity: 0; transition: opacity 0.2s, color 0.2s, border-color 0.2s; }
+        .group-card:hover .play-group-btn { opacity: 1; }
+        .play-group-btn:hover { border-color: var(--clr-primary); }
+        .play-group-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Dropdown & Tag Input (Mevcut) */
+        .dropdown-menu { position: absolute; top: 100%; right: 0; display: none; flex-direction: column; background: var(--clr-surface); border: 1px solid var(--clr-border); border-radius: var(--radius-sm); box-shadow: var(--shadow-md); min-width: 160px; z-index: 100; margin-top: 0.25rem; }
+        .dropdown-menu a, .dropdown-menu button { display: block; width: 100%; padding: 0.6rem 1rem; text-align: left; background: none; border: none; color: var(--clr-text); cursor: pointer; font-size: 0.9rem; transition: background var(--transition); }
         .dropdown-menu a:hover, .dropdown-menu button:hover { background: var(--clr-surface-2); }
         .dropdown-menu button.text-danger:hover { background: rgba(224, 82, 96, 0.15); color: var(--clr-danger); }
-
-        .tag-input-container {
-            display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.6rem;
-            background: var(--clr-surface-2); border: 1px solid var(--clr-border);
-            border-radius: var(--radius-sm); min-height: 2.5rem;
-        }
-        .tag {
-            display: inline-flex; align-items: center; gap: 0.4rem;
-            background: var(--clr-primary); color: #fff; padding: 0.3rem 0.6rem;
-            border-radius: 4px; font-size: 0.85rem; font-weight: 600;
-        }
+        .tag-input-container { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.6rem; background: var(--clr-surface-2); border: 1px solid var(--clr-border); border-radius: var(--radius-sm); min-height: 2.5rem; }
+        .tag { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--clr-primary); color: #fff; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
         .tag button { background: none; border: none; color: #fff; cursor: pointer; font-size: 1rem; padding: 0; line-height: 1; }
         .tag-input-container input { flex: 1; min-width: 100px; background: none; border: none; outline: none; color: var(--clr-text); font-family: var(--font-body); }
         .actions-cell { position: relative; }
-        .loading { opacity: 0.6; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -73,49 +62,63 @@
     <header class="topbar" id="topbar-container"></header>
 
     <main class="main-content page-content">
-        <!-- Sayfa başlığı — ilk stagger -->
-        <div class="stagger-item delay-1" style="display: flex; justify-content: flex-end; width: 100%;">
-            <button class="btn btn-primary" id="btn-new-scenario">
-                + Yeni Senaryo
-            </button>
+        <div class="stagger-item delay-1 flex" style="justify-content: flex-end; gap: 1rem; width: 100%; margin-bottom: 1.5rem;">
+            <button class="btn btn-primary" id="btn-new-group">+ Yeni Modül</button>
         </div>
 
-        <!-- Filtreleme Alanı -->
-        <div class="card filter-bar mt-4 stagger-item delay-2" style="display: flex; gap: 1rem; align-items: flex-end;">
-            <div class="form-group" style="flex: 1;">
-                <label class="form-label">Ara (Ad/Açıklama)</label>
-                <input type="text" class="form-input" id="filter-search" placeholder="Senaryo ara... (Debounce)">
+        <div id="view-groups" class="stagger-item delay-2">
+            <div class="group-cards-grid" id="groups-list">
             </div>
-            <div class="form-group" style="width: 200px;">
-                <label class="form-label">Durum</label>
-                <select class="form-input" id="filter-status">
-                    <option value="">Tüm Durumlar</option>
-                    <option value="DRAFT">Taslak</option>
-                    <option value="READY">Hazır</option>
-                    <option value="ARCHIVED">Arşivli</option>
-                </select>
+            <div id="groups-pagination-container" class="mt-4"></div>
+        </div>
+
+        <div id="view-scenarios" class="stagger-item delay-2" style="display: none;">
+
+            <div class="flex" style="align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="flex" style="align-items: center; gap: 1rem;">
+                    <button class="btn btn-icon" onclick="window.backToGroups()" title="Modüllere Dön" style="background: var(--clr-surface); border: 1px solid var(--clr-border);">
+                        ←
+                    </button>
+                    <h2 id="current-group-title" style="margin: 0; font-size: 1.5rem; color: var(--clr-text);">Modül Adı</h2>
+                </div>
+                <button class="btn btn-primary" id="btn-new-scenario" style="display: none;">+ Yeni Senaryo</button>
             </div>
+
+            <div class="card filter-bar" style="display: flex; gap: 1rem; align-items: flex-end;">
+                <div class="form-group" style="flex: 1;">
+                    <label class="form-label">Senaryo Ara</label>
+                    <input type="text" class="form-input" id="filter-search" placeholder="Senaryo adı veya açıklaması...">
+                </div>
+                <div class="form-group" style="width: 200px;">
+                    <label class="form-label">Durum</label>
+                    <select class="form-input" id="filter-status">
+                        <option value="">Tüm Durumlar</option>
+                        <option value="DRAFT">Taslak</option>
+                        <option value="READY">Hazır</option>
+                        <option value="ARCHIVED">Arşivli</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card mt-4 p-0">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th style="width: 35%;">Senaryo Adı</th>
+                        <th style="width: 15%;">Durum</th>
+                        <th style="width: 20%;">Sahibi</th>
+                        <th style="width: 20%;">Oluşturulma</th>
+                        <th style="width: 10%; text-align: right;">İşlemler</th>
+                    </tr>
+                    </thead>
+                    <tbody id="scenarios-list">
+                    <tr><td colspan="5" class="text-center p-8">Yükleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="scenarios-pagination-container" class="mt-4"></div>
         </div>
 
-        <!-- Senaryo Tablosu -->
-        <div class="card mt-4 p-0 stagger-item delay-3">
-            <table class="data-table">
-                <thead>
-                <tr>
-                    <th style="width: 35%;">Senaryo Adı</th>
-                    <th style="width: 15%;">Durum</th>
-                    <th style="width: 20%;">Sahibi</th>
-                    <th style="width: 20%;">Oluşturulma</th>
-                    <th style="width: 10%; text-align: right;">İşlemler</th>
-                </tr>
-                </thead>
-                <tbody id="scenarios-list">
-                <tr><td colspan="5" class="text-center p-8">Senaryo yükleniyor...</td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div id="pagination-container" class="mt-4 stagger-item delay-4"></div>
     </main>
 </div>
 <script src="../assets/js/utils.js"></script>

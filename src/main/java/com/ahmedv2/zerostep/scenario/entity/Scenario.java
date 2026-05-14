@@ -32,6 +32,10 @@ public class Scenario extends BaseEntity {
     @JoinColumn(name = "owner_id")
     private User owner;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id")
+    private ScenarioGroup group;
+
     @Column(nullable = false, length = 255)
     private String name;
 
@@ -68,7 +72,6 @@ public class Scenario extends BaseEntity {
             tags = new String[0];
         }
     }
-
 
     public void markReady() {
         if (this.status == ScenarioStatus.ARCHIVED) {

@@ -44,7 +44,9 @@ public class ExtensionStepService {
                 req.description(),
                 req.baseUrl(),
                 null, // browserConfig default
-                null  // tags yok
+                null, // tags yok
+                null, // groupPublicId yok
+                null  // status yok
         );
         return scenarioService.createScenario(inner, username);
     }

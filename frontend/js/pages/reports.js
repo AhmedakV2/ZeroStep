@@ -1,6 +1,8 @@
 // Raporlar sayfası — /reports/scenarios/{id}/summary yerine
 // /reports endpoint'inden veri çekip frontend'de hesaplar
 
+let scenariosCache = [];
+
 (async function init() {
     if (!Auth.isLoggedIn()) {
         window.location.href = '../index.html';
@@ -11,62 +13,125 @@
     Topbar.render('topbar', 'Raporlar');
 
     setupEventListeners();
+    await loadGroupsForSelector();
     await loadScenariosForSelector();
 })();
 
 // ── Event Listeners ────────────────────────────────────────
 function setupEventListeners() {
-    const selector = document.getElementById('select-scenario');
-    if (!selector) return;
+    const groupSelector = document.getElementById('select-group');
 
-    selector.addEventListener('change', async (e) => {
-        const scenarioId   = e.target.value;
-        const scenarioName = e.target.options[e.target.selectedIndex]?.text || '';
-        const emptyState   = document.getElementById('scenario-empty');
-        const summaryView  = document.getElementById('scenario-summary');
-
-        if (!scenarioId) {
-            emptyState.style.display  = 'block';
-            summaryView.style.display = 'none';
-            resetSummaryUI();
-            return;
-        }
-
-        emptyState.style.display  = 'none';
-        summaryView.style.display = 'block';
-        resetSummaryUI();
-
-        await loadScenarioSummary(scenarioId, scenarioName);
+    groupSelector?.addEventListener('change', async (e) => {
+        const groupId = e.target.value || '';
+        await loadScenariosForSelector(groupId);
+        resetScenarioSelection();
     });
 }
 
-// ── Senaryo Seçiciyi Doldur ────────────────────────────────
-async function loadScenariosForSelector() {
+async function loadGroupsForSelector() {
+    const groupSelector = document.getElementById('select-group');
+    if (!groupSelector) return;
+
     try {
-        const raw = await Api.get('/scenarios', { page: 0, size: 1000 });
+        const raw = await Api.get('/scenario-groups', { page: 0, size: 200, sort: 'createdAt,desc' });
+        const data = raw?.data || raw || {};
+        const groups = data.content || [];
+
+        groupSelector.innerHTML = ['<option value="">— Tümü —</option>'].concat(
+            groups.map(g => `<option value="${Utils.escHtml(g.publicId)}">${Utils.escHtml(g.name)}</option>`)
+        ).join('');
+    } catch (err) {
+        Toast.error('Modül listesi yüklenemedi: ' + err.message);
+    }
+}
+
+function resetScenarioSelection() {
+    const emptyState = document.getElementById('scenario-empty');
+    const summaryView = document.getElementById('scenario-summary');
+
+    if (emptyState) emptyState.style.display = 'block';
+    if (summaryView) summaryView.style.display = 'none';
+    resetSummaryUI();
+}
+
+// ── Senaryo Seçiciyi Doldur ────────────────────────────────
+async function loadScenariosForSelector(groupPublicId = '') {
+    try {
+        const params = { page: 0, size: 1000 };
+        if (groupPublicId) params.groupPublicId = groupPublicId;
+
+        const raw = await Api.get('/scenarios', params);
         let scenarios = [];
 
         if (raw?.content)            scenarios = raw.content;
         else if (Array.isArray(raw)) scenarios = raw;
         else if (raw?.data?.content) scenarios = raw.data.content;
 
-        const selector = document.getElementById('select-scenario');
-        if (!selector) return;
-
-        if (scenarios.length === 0) {
-            selector.innerHTML = '<option value="">— Henüz senaryo yok —</option>';
-            return;
-        }
-
-        selector.innerHTML =
-            '<option value="">— Senaryo Seçin —</option>' +
-            scenarios.map(s =>
-                `<option value="${Utils.escHtml(s.publicId)}">`
-                + `${Utils.escHtml(s.name)}</option>`
-            ).join('');
+        scenariosCache = scenarios;
+        renderScenarioTable(scenariosCache);
     } catch (err) {
         Toast.error('Senaryo listesi yüklenemedi: ' + err.message);
     }
+}
+
+function renderScenarioTable(scenarios) {
+    const tbody = document.getElementById('scenarios-tbody');
+    if (!tbody) return;
+
+    if (!scenarios || scenarios.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3">
+            <div class="empty-state">
+                <span class="empty-state-icon">▶</span>
+                <p class="empty-state-msg">Senaryo bulunamadı</p>
+            </div>
+        </td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = scenarios.map(s => {
+        const ownerName = s.owner?.username || s.ownerUsername || '—';
+        const status = s.status || 'DRAFT';
+        return `
+            <tr style="cursor:pointer" data-id="${Utils.escHtml(s.publicId)}" data-name="${Utils.escHtml(s.name)}">
+                <td>${Utils.escHtml(s.name)}</td>
+                <td>${scenarioStatusBadge(status)}</td>
+                <td>${Utils.escHtml(ownerName)}</td>
+            </tr>`;
+    }).join('');
+
+    tbody.querySelectorAll('tr[data-id]').forEach(row => {
+        row.addEventListener('click', async () => {
+            const scenarioId = row.dataset.id;
+            const scenarioName = row.dataset.name || '';
+            const emptyState = document.getElementById('scenario-empty');
+            const summaryView = document.getElementById('scenario-summary');
+
+            tbody.querySelectorAll('tr.is-selected').forEach(r => r.classList.remove('is-selected'));
+            row.classList.add('is-selected');
+
+            if (emptyState) emptyState.style.display = 'none';
+            if (summaryView) summaryView.style.display = 'block';
+            resetSummaryUI();
+
+            await loadScenarioSummary(scenarioId, scenarioName);
+        });
+    });
+}
+
+function scenarioStatusBadge(status) {
+    const map = {
+        READY: 'badge-success',
+        DRAFT: 'badge-warning',
+        ARCHIVED: 'badge-neutral',
+    };
+    const cls = map[status] ?? 'badge-neutral';
+    const labels = {
+        READY: 'Hazır',
+        DRAFT: 'Taslak',
+        ARCHIVED: 'Arşivli',
+    };
+    const label = labels[status] ?? status;
+    return `<span class="badge ${cls}">${label}</span>`;
 }
 
 // ── Senaryo Özet — /reports endpoint'ini kullanır ─────────

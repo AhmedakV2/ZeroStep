@@ -4,7 +4,7 @@ const AdminAuditPage = (() => {
 
     async function init() {
         if (!Auth.isLoggedIn()) {
-            window.location.href = '../../index.html';
+            window.location.href = '../../../index.html';
             return;
         }
 

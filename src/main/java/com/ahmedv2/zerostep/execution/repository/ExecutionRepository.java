@@ -69,15 +69,18 @@ public interface ExecutionRepository extends JpaRepository<Execution, Long> {
         SELECT e FROM Execution e
         JOIN e.scenario s
         JOIN s.owner o
+        LEFT JOIN s.group g
         WHERE (:scenarioName = '' OR LOWER(s.name) LIKE LOWER(CONCAT('%', :scenarioName, '%')))
           AND (:statusIsNull = true OR e.status = :status)
           AND (:username = '' OR o.username = :username)
+          AND (:groupPublicId IS NULL OR g.publicId = :groupPublicId)
         """)
     Page<Execution> findAllFiltered(
             @Param("scenarioName") String scenarioName,
             @Param("status")       ExecutionStatus status,
             @Param("statusIsNull") boolean statusIsNull,
             @Param("username")     String username,
+            @Param("groupPublicId") UUID groupPublicId,
             Pageable pageable
     );
 
