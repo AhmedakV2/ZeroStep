@@ -7,12 +7,19 @@ spring:
     allow-bean-definition-overriding: false
     banner-mode: console
 
-  # Eklenen Bölüm: Pagination ayarları
   data:
     web:
       pageable:
         default-page-size: 20
         one-indexed-parameters: false
+
+  web:
+    resources:
+      static-locations: file:./frontend/
+      add-mappings: true
+
+  mvc:
+    static-path-pattern: /**
 
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
@@ -80,6 +87,8 @@ app:
         - "http://localhost:5500"
         - "http://localhost:63342"
         - "http://127.0.0.1:63342"
+        - "http://localhost:8080"
+        - "http://127.0.0.1:8080"
       allowed-origin-patterns:
         - "chrome-extension://*"
       allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS

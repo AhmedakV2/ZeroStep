@@ -14,7 +14,7 @@ spring:
 
 app:
   execution:
-    headless: true   # Önce bunu true yap, test et
+    headless: true
 
   jpa:
     show-sql: true

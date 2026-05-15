@@ -102,7 +102,24 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/api/v1/ping",
-                                "/ws/**"
+                                "/ws/**",
+                                // Static dosyalar
+                                "/index.html",
+                                "/",
+                                "/assets/**",
+                                "/js/**",
+                                "/pages/**",
+                                // Font ve resim dosyaları
+                                "/*.css",
+                                "/*.js",
+                                "/**/*.css",
+                                "/**/*.js",
+                                "/**/*.png",
+                                "/**/*.jpg",
+                                "/**/*.svg",
+                                "/**/*.woff",
+                                "/**/*.woff2",
+                                "/**/*.ttf"
                         ).permitAll()
 
                         // Auth endpoint'leri
